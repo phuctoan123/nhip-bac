@@ -192,22 +192,58 @@ function initFloatingSocialMenu() {
 
   menu.innerHTML = `
     <div class="social-links">
-      <a class="social-link" href="https://zalo.me/0934013486" target="_blank" rel="noopener">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/9/91/Icon_of_Zalo.svg" alt="Zalo" />
-      </a>
 
-      <a class="social-link" href="https://facebook.com" target="_blank" rel="noopener">
-        <img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" alt="Facebook" />
-      </a>
+        <a
+          class="social-link social-zalo"
+          href="https://zalo.me/0934013486"
+          target="_blank"
+          rel="noopener"
+          aria-label="Zalo"
+        > 
+          <i class="fa-brands fa-zalo"></i>
+          <span>Zalo</span>
+        </a>
 
-      <a class="social-link" href="https://instagram.com" target="_blank" rel="noopener">
-        <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" alt="Instagram" />
-      </a>
+        <a
+          class="social-link social-facebook"
+          href="https://facebook.com"
+          target="_blank"
+          rel="noopener"
+          aria-label="Facebook"
+        >
+          <i class="fa-brands fa-facebook-f" style="color: rgb(79, 164, 231);"></i>
+        </a>
 
-      <a class="social-link" href="https://tiktok.com" target="_blank" rel="noopener">
-        <img src="https://cdn-icons-png.flaticon.com/512/3046/3046121.png" alt="TikTok" />
-      </a>
-    </div>
+        <a
+          class="social-link social-instagram"
+          href="https://instagram.com"
+          target="_blank"
+          rel="noopener"
+          aria-label="Instagram"
+        >
+          <style>
+            .insta-gradient {
+              background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fd5949 45%, #d6249f 60%, #8a3ab9 90%);
+              -webkit-background-clip: text;
+              background-clip: text;
+              color: transparent; /* Quan trọng để lộ nền gradient */
+            }
+          </style>
+
+          <i class="fa-brands fa-square-instagram fa-fade insta-gradient"></i>
+        </a>
+
+        <a
+          class="social-link social-tiktok"
+          href="https://tiktok.com"
+          target="_blank"
+          rel="noopener"
+          aria-label="TikTok"
+        >
+          <i class="fa-brands fa-tiktok"></i>
+        </a>
+
+      </div>
 
     <button class="social-trigger">+</button>
   `;
