@@ -1,6 +1,5 @@
 const STORAGE_KEY = "nhip-bac-language";
 
-
 const pageMap = {
   home: "index.html",
   services: "services.html",
@@ -19,20 +18,6 @@ function setLanguage(lang) {
     const value = node.dataset[activeLang];
     if (value) node.textContent = value;
   });
-
-  document.querySelectorAll("[data-placeholder-vi], [data-placeholder-en]").forEach((node) => {
-    const value = node.dataset[`placeholder${activeLang === "vi" ? "Vi" : "En"}`];
-    if (value) node.setAttribute("placeholder", value);
-  });
-
-  document.querySelectorAll("img[data-src-vi][data-src-en]").forEach((image) => {
-    const value = image.dataset[`src${activeLang === "vi" ? "Vi" : "En"}`];
-    if (value && image.getAttribute("src") !== value) image.setAttribute("src", value);
-  });
-
-  document.querySelectorAll(".lang-btn").forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.lang === activeLang);
-  });
 }
 
 function initLanguage() {
@@ -46,6 +31,7 @@ function initLanguage() {
 function initNavigation() {
   const toggle = document.querySelector(".nav-toggle");
   const nav = document.querySelector(".site-nav");
+
   if (!toggle || !nav) return;
 
   toggle.addEventListener("click", () => {
@@ -53,331 +39,26 @@ function initNavigation() {
     document.body.classList.toggle("nav-open", isOpen);
     toggle.setAttribute("aria-expanded", String(isOpen));
   });
-
-  nav.addEventListener("click", (event) => {
-    if (event.target.matches("a")) {
-      nav.classList.remove("is-open");
-      document.body.classList.remove("nav-open");
-      toggle.setAttribute("aria-expanded", "false");
-    }
-  });
-
-  const page = document.body.dataset.page;
-  const currentHref = pageMap[page];
-  if (currentHref) {
-    document.querySelectorAll(`.site-nav a[href="${currentHref}"]`).forEach((link) => {
-      link.classList.add("is-active");
-    });
-  }
 }
 
 function initReveal() {
   const items = document.querySelectorAll(".reveal");
-  if (!items.length) return;
 
   if (!("IntersectionObserver" in window)) {
     items.forEach((item) => item.classList.add("is-visible"));
     return;
   }
 
-  const observer = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add("is-visible");
-          observer.unobserve(entry.target);
-        }
-      });
-    },
-    { threshold: 0.14 }
-  );
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add("is-visible");
+        observer.unobserve(entry.target);
+      }
+    });
+  });
 
   items.forEach((item) => observer.observe(item));
-}
-
-function initTiltCards() {
-  const cards = document.querySelectorAll(".tilt-card");
-  cards.forEach((card) => {
-    card.addEventListener("pointermove", (event) => {
-      const rect = card.getBoundingClientRect();
-      const x = (event.clientX - rect.left) / rect.width - 0.5;
-      const y = (event.clientY - rect.top) / rect.height - 0.5;
-      card.style.transform = `perspective(900px) rotateX(${y * -7}deg) rotateY(${x * 9}deg) translateY(-4px)`;
-    });
-
-    card.addEventListener("pointerleave", () => {
-      card.style.transform = "";
-    });
-  });
-}
-
-function initCarousel() {
-  const slides = [...document.querySelectorAll(".review-slide")];
-  const dotsWrap = document.querySelector(".carousel-dots");
-  if (!slides.length || !dotsWrap) return;
-
-  slides.forEach((_, index) => {
-    const dot = document.createElement("span");
-    dot.className = index === 0 ? "is-active" : "";
-    dotsWrap.append(dot);
-  });
-
-  const dots = [...dotsWrap.children];
-  let active = 0;
-
-  window.setInterval(() => {
-    slides[active].classList.remove("is-active");
-    dots[active].classList.remove("is-active");
-    active = (active + 1) % slides.length;
-    slides[active].classList.add("is-active");
-    dots[active].classList.add("is-active");
-  }, 4200);
-}
-
-function initBookingForm() {
-  const form = document.querySelector("#bookingForm");
-  if (!form) return;
-
-  form.addEventListener("submit", (event) => {
-    event.preventDefault();
-    const data = new FormData(form);
-    const message = [
-      "Xin chào Nhíp Bạc, tôi muốn đặt lịch:",
-      `Họ tên: ${data.get("name") || ""}`,
-      `SĐT: ${data.get("phone") || ""}`,
-      `Dịch vụ: ${data.get("service") || ""}`,
-      `Thời gian: ${data.get("time") || ""}`,
-      `Ghi chú: ${data.get("note") || ""}`,
-    ].join("\n");
-
-    window.open(`https://zalo.me/0934013486?message=${encodeURIComponent(message)}`, "_blank", "noopener");
-  });
-}
-
-function initHeroCanvas() {
-  const canvas = document.querySelector("#hairCanvas");
-  if (!canvas) return;
-  const context = canvas.getContext("2d");
-  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let width = 0;
-  let height = 0;
-  let hairs = [];
-  let frame = 0;
-
-  function resize() {
-    const ratio = Math.min(window.devicePixelRatio || 1, 2);
-    width = canvas.clientWidth;
-    height = canvas.clientHeight;
-    canvas.width = Math.floor(width * ratio);
-    canvas.height = Math.floor(height * ratio);
-    context.setTransform(ratio, 0, 0, ratio, 0, 0);
-    hairs = Array.from({ length: Math.max(34, Math.floor(width / 26)) }, (_, index) => ({
-      x: Math.random() * width,
-      y: Math.random() * height,
-      length: 80 + Math.random() * 160,
-      speed: 0.25 + Math.random() * 0.65,
-      sway: 14 + Math.random() * 38,
-      phase: Math.random() * Math.PI * 2,
-      opacity: 0.14 + Math.random() * 0.34,
-      hue: index % 4 === 0 ? "220,234,242" : "232,185,35",
-    }));
-  }
-
-  function drawHair(hair, time) {
-    const sway = Math.sin(time * 0.001 + hair.phase) * hair.sway;
-    const gradient = context.createLinearGradient(hair.x, hair.y, hair.x + sway, hair.y + hair.length);
-    gradient.addColorStop(0, `rgba(${hair.hue},0)`);
-    gradient.addColorStop(0.45, `rgba(${hair.hue},${hair.opacity})`);
-    gradient.addColorStop(1, `rgba(${hair.hue},0)`);
-
-    context.beginPath();
-    context.moveTo(hair.x, hair.y);
-    context.bezierCurveTo(
-      hair.x + sway,
-      hair.y + hair.length * 0.24,
-      hair.x - sway * 0.75,
-      hair.y + hair.length * 0.64,
-      hair.x + sway * 0.45,
-      hair.y + hair.length
-    );
-    context.strokeStyle = gradient;
-    context.lineWidth = 1.1;
-    context.stroke();
-  }
-
-  function animate(time = 0) {
-    context.clearRect(0, 0, width, height);
-    hairs.forEach((hair) => {
-      hair.y += hair.speed;
-      if (hair.y > height + hair.length) {
-        hair.y = -hair.length;
-        hair.x = Math.random() * width;
-      }
-      drawHair(hair, time);
-    });
-
-    frame = window.requestAnimationFrame(animate);
-  }
-
-  resize();
-  window.addEventListener("resize", resize);
-  if (!prefersReducedMotion) {
-    animate();
-  } else {
-    hairs.forEach((hair) => drawHair(hair, 0));
-  }
-
-  window.addEventListener("beforeunload", () => cancelAnimationFrame(frame));
-}
-
-function initPosterLightbox() {
-  const posterFrame = document.querySelector(".poster-frame");
-  const posterImage = posterFrame?.querySelector("img");
-
-  if (!posterFrame || !posterImage) return;
-
-  const style = document.createElement("style");
-  style.textContent = `
-    .poster-frame {
-      position: relative;
-      overflow: hidden;
-      cursor: zoom-in;
-      border-radius: 28px;
-      isolation: isolate;
-    }
-
-    .poster-frame::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(
-        135deg,
-        rgba(255,255,255,0.02),
-        rgba(255,255,255,0.22),
-        rgba(255,255,255,0.04)
-      );
-      opacity: 0;
-      transition: opacity .45s ease;
-      pointer-events: none;
-    }
-
-    .poster-frame img {
-      transition:
-        transform .7s cubic-bezier(.22,1,.36,1),
-        filter .7s ease,
-        box-shadow .7s ease;
-    }
-
-    .poster-frame:hover img {
-      transform: scale(1.04);
-      filter: brightness(1.12) contrast(1.05);
-      box-shadow: 0 30px 80px rgba(0,0,0,.35);
-    }
-
-    .poster-frame:hover::after {
-      opacity: 1;
-    }
-
-    .poster-lightbox {
-      position: fixed;
-      inset: 0;
-      z-index: 9999;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      background: rgba(10,10,10,.9);
-      backdrop-filter: blur(12px);
-      opacity: 0;
-      visibility: hidden;
-      transition: all .35s ease;
-    }
-
-    .poster-lightbox.is-open {
-      opacity: 1;
-      visibility: visible;
-    }
-
-    .poster-lightbox img {
-      width: min(92vw, 720px);
-      max-height: 90vh;
-      object-fit: contain;
-      border-radius: 24px;
-      transform: scale(.9);
-      transition: transform .35s cubic-bezier(.22,1,.36,1);
-      box-shadow: 0 30px 90px rgba(0,0,0,.55);
-    }
-
-    .poster-lightbox.is-open img {
-      transform: scale(1);
-    }
-
-    .poster-lightbox-close {
-      position: absolute;
-      top: 20px;
-      right: 28px;
-      color: white;
-      font-size: 42px;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .page-swipe-transition {
-      transition:
-        transform .45s cubic-bezier(.22,1,.36,1),
-        opacity .45s ease;
-    }
-
-    .page-swipe-transition.is-swiping-left {
-      transform: translateX(-100px);
-      opacity: .2;
-    }
-
-    .page-swipe-transition.is-swiping-right {
-      transform: translateX(100px);
-      opacity: .2;
-    }
-  `;
-
-  document.head.append(style);
-
-  const modal = document.createElement("div");
-  modal.className = "poster-lightbox";
-
-  modal.innerHTML = `
-    <span class="poster-lightbox-close">&times;</span>
-    <img src="${posterImage.src}" alt="Nhíp Bạc poster preview" />
-  `;
-
-  document.body.append(modal);
-
-  const modalImage = modal.querySelector("img");
-  const closeButton = modal.querySelector(".poster-lightbox-close");
-
-  posterFrame.addEventListener("click", () => {
-    modalImage.src = posterImage.src;
-    modal.classList.add("is-open");
-    document.body.style.overflow = "hidden";
-  });
-
-  function closeModal() {
-    modal.classList.remove("is-open");
-    document.body.style.overflow = "";
-  }
-
-  closeButton.addEventListener("click", closeModal);
-
-  modal.addEventListener("click", (event) => {
-    if (event.target === modal) {
-      closeModal();
-    }
-  });
-
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") {
-      closeModal();
-    }
-  });
 }
 
 function initMobileSwipeNavigation() {
@@ -387,13 +68,10 @@ function initMobileSwipeNavigation() {
   const currentPath = window.location.pathname.split("/").pop() || "index.html";
   const currentIndex = pages.indexOf(currentPath);
 
-  if (currentIndex === -1) return;
-
   let touchStartX = 0;
-  let touchEndX = 0;
   let touchStartY = 0;
 
-  document.body.classList.add("page-swipe-transition");
+  document.body.style.transition = "transform .45s cubic-bezier(.22,1,.36,1), opacity .45s ease";
 
   window.addEventListener("touchstart", (event) => {
     touchStartX = event.changedTouches[0].screenX;
@@ -401,7 +79,7 @@ function initMobileSwipeNavigation() {
   }, { passive: true });
 
   window.addEventListener("touchend", (event) => {
-    touchEndX = event.changedTouches[0].screenX;
+    const touchEndX = event.changedTouches[0].screenX;
     const touchEndY = event.changedTouches[0].screenY;
 
     const deltaX = touchEndX - touchStartX;
@@ -411,31 +89,142 @@ function initMobileSwipeNavigation() {
     if (Math.abs(deltaX) < 90) return;
 
     if (deltaX < 0 && currentIndex < pages.length - 1) {
-      document.body.classList.add("is-swiping-left");
+      document.body.style.transform = "translateX(-100px)";
+      document.body.style.opacity = ".15";
 
-      window.setTimeout(() => {
+      setTimeout(() => {
         window.location.href = pages[currentIndex + 1];
       }, 320);
     }
 
     if (deltaX > 0 && currentIndex > 0) {
-      document.body.classList.add("is-swiping-right");
+      document.body.style.transform = "translateX(100px)";
+      document.body.style.opacity = ".15";
 
-      window.setTimeout(() => {
+      setTimeout(() => {
         window.location.href = pages[currentIndex - 1];
       }, 320);
     }
   }, { passive: true });
 }
 
+function initFloatingSocialMenu() {
+  const oldButton = document.querySelector(".floating-zalo");
+  if (oldButton) {
+    oldButton.remove();
+  }
+
+  const style = document.createElement("style");
+
+  style.textContent = `
+    .social-fab {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .social-links {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(20px) scale(.9);
+      transition: all .45s cubic-bezier(.22,1,.36,1);
+    }
+
+    .social-fab.is-open .social-links {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0) scale(1);
+    }
+
+    .social-link,
+    .social-trigger {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      backdrop-filter: blur(14px);
+      background: rgba(25,25,25,.82);
+      border: 1px solid rgba(255,255,255,.08);
+      box-shadow: 0 18px 40px rgba(0,0,0,.28);
+      color: white;
+      transition: all .35s cubic-bezier(.22,1,.36,1);
+    }
+
+    .social-link:hover,
+    .social-trigger:hover {
+      transform: translateY(-6px) scale(1.06);
+      background: rgba(212,175,55,.18);
+      box-shadow: 0 22px 48px rgba(0,0,0,.38);
+    }
+
+    .social-link img {
+      width: 28px;
+      height: 28px;
+      object-fit: contain;
+    }
+
+    .social-trigger {
+      font-size: 1.4rem;
+      cursor: pointer;
+    }
+
+    .social-fab.is-open .social-trigger {
+      transform: rotate(45deg);
+      background: rgba(212,175,55,.22);
+    }
+  `;
+
+  document.head.append(style);
+
+  const menu = document.createElement("div");
+  menu.className = "social-fab";
+
+  menu.innerHTML = `
+    <div class="social-links">
+      <a class="social-link" href="https://zalo.me/0934013486" target="_blank" rel="noopener">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/9/91/Icon_of_Zalo.svg" alt="Zalo" />
+      </a>
+
+      <a class="social-link" href="https://facebook.com" target="_blank" rel="noopener">
+        <img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" alt="Facebook" />
+      </a>
+
+      <a class="social-link" href="https://instagram.com" target="_blank" rel="noopener">
+        <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" alt="Instagram" />
+      </a>
+
+      <a class="social-link" href="https://tiktok.com" target="_blank" rel="noopener">
+        <img src="https://cdn-icons-png.flaticon.com/512/3046/3046121.png" alt="TikTok" />
+      </a>
+    </div>
+
+    <button class="social-trigger">+</button>
+  `;
+
+  document.body.append(menu);
+
+  const trigger = menu.querySelector(".social-trigger");
+
+  trigger.addEventListener("click", () => {
+    menu.classList.toggle("is-open");
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   initLanguage();
   initNavigation();
   initReveal();
-  initTiltCards();
-  initCarousel();
-  initBookingForm();
-  initHeroCanvas();
-  initPosterLightbox();
   initMobileSwipeNavigation();
+  initFloatingSocialMenu();
 });
