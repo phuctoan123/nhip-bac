@@ -24,6 +24,11 @@ function setLanguage(lang) {
     if (value) node.setAttribute("placeholder", value);
   });
 
+  document.querySelectorAll("img[data-src-vi][data-src-en]").forEach((image) => {
+    const value = image.dataset[`src${activeLang === "vi" ? "Vi" : "En"}`];
+    if (value && image.getAttribute("src") !== value) image.setAttribute("src", value);
+  });
+
   document.querySelectorAll(".lang-btn").forEach((button) => {
     button.classList.toggle("is-active", button.dataset.lang === activeLang);
   });
