@@ -230,6 +230,140 @@ function initHeroCanvas() {
   window.addEventListener("beforeunload", () => cancelAnimationFrame(frame));
 }
 
+function initPosterLightbox() {
+  const posterFrame = document.querySelector(".poster-frame");
+  const posterImage = posterFrame?.querySelector("img");
+
+  if (!posterFrame || !posterImage) return;
+
+  const style = document.createElement("style");
+  style.textContent = `
+    .poster-frame {
+      position: relative;
+      overflow: hidden;
+      cursor: zoom-in;
+      border-radius: 28px;
+      isolation: isolate;
+    }
+
+    .poster-frame::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        135deg,
+        rgba(255,255,255,0.02),
+        rgba(255,255,255,0.22),
+        rgba(255,255,255,0.04)
+      );
+      opacity: 0;
+      transition: opacity .45s ease;
+      pointer-events: none;
+    }
+
+    .poster-frame img {
+      transition:
+        transform .7s cubic-bezier(.22,1,.36,1),
+        filter .7s ease,
+        box-shadow .7s ease;
+    }
+
+    .poster-frame:hover img {
+      transform: scale(1.04);
+      filter: brightness(1.12) contrast(1.05);
+      box-shadow: 0 30px 80px rgba(0,0,0,.35);
+    }
+
+    .poster-frame:hover::after {
+      opacity: 1;
+    }
+
+    .poster-lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(10,10,10,.9);
+      backdrop-filter: blur(12px);
+      opacity: 0;
+      visibility: hidden;
+      transition: all .35s ease;
+    }
+
+    .poster-lightbox.is-open {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .poster-lightbox img {
+      width: min(92vw, 720px);
+      max-height: 90vh;
+      object-fit: contain;
+      border-radius: 24px;
+      transform: scale(.9);
+      transition: transform .35s cubic-bezier(.22,1,.36,1);
+      box-shadow: 0 30px 90px rgba(0,0,0,.55);
+    }
+
+    .poster-lightbox.is-open img {
+      transform: scale(1);
+    }
+
+    .poster-lightbox-close {
+      position: absolute;
+      top: 20px;
+      right: 28px;
+      color: white;
+      font-size: 42px;
+      cursor: pointer;
+      user-select: none;
+    }
+  `;
+
+  document.head.append(style);
+
+  const modal = document.createElement("div");
+  modal.className = "poster-lightbox";
+
+  modal.innerHTML = `
+    <span class="poster-lightbox-close">&times;</span>
+    <img src="${posterImage.src}" alt="Nhíp Bạc poster preview" />
+  `;
+
+  document.body.append(modal);
+
+  const modalImage = modal.querySelector("img");
+  const closeButton = modal.querySelector(".poster-lightbox-close");
+
+  posterFrame.addEventListener("click", () => {
+    modalImage.src = posterImage.src;
+    modal.classList.add("is-open");
+    document.body.style.overflow = "hidden";
+  });
+
+  function closeModal() {
+    modal.classList.remove("is-open");
+    document.body.style.overflow = "";
+  }
+
+  closeButton.addEventListener("click", closeModal);
+
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) {
+      closeModal();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeModal();
+    }
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   initLanguage();
   initNavigation();
@@ -238,4 +372,5 @@ document.addEventListener("DOMContentLoaded", () => {
   initCarousel();
   initBookingForm();
   initHeroCanvas();
+  initPosterLightbox();
 });
