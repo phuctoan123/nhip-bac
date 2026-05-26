@@ -26,7 +26,7 @@ body {
   background:
     radial-gradient(circle at top left, rgba(220, 234, 242, 0.62), transparent 34rem),
     linear-gradient(180deg, #fffaf3 0%, var(--cream) 48%, #fffaf3 100%);
-  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "Be Vietnam Pro", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   line-height: 1.65;
 }
 
@@ -87,7 +87,7 @@ textarea {
   border-radius: 50%;
   color: var(--gold);
   background: linear-gradient(145deg, #282521, #0f0e0d);
-  font-family: "Cinzel", serif;
+  font-family: "Noto Serif", serif;
   font-size: 0.8rem;
   font-weight: 700;
   box-shadow: 0 0 22px rgba(212, 175, 55, 0.2);
@@ -95,7 +95,7 @@ textarea {
 
 .brand strong {
   display: block;
-  font-family: "Cinzel", serif;
+  font-family: "Noto Serif", serif;
   font-size: 1rem;
   line-height: 1.1;
 }
@@ -243,7 +243,7 @@ textarea {
 .hero h1,
 .page-hero h1 {
   margin: 0;
-  font-family: "Cinzel", "Playfair Display", serif;
+  font-family: "Noto Serif", serif;
   font-weight: 700;
   line-height: 1;
 }
@@ -256,7 +256,7 @@ textarea {
 .hero-kicker {
   margin: 8px 0 0;
   color: var(--blue);
-  font-family: "Playfair Display", serif;
+  font-family: "Noto Serif", serif;
   font-size: clamp(1.3rem, 3vw, 2.25rem);
 }
 
@@ -401,7 +401,7 @@ h2,
 h3 {
   margin: 0 0 14px;
   color: var(--ink);
-  font-family: "Playfair Display", serif;
+  font-family: "Noto Serif", serif;
   line-height: 1.12;
 }
 
@@ -440,7 +440,7 @@ p {
   color: transparent;
   background: linear-gradient(135deg, #fff6c9, var(--gold-bright), #875f0e);
   background-clip: text;
-  font-family: "Cinzel", serif;
+  font-family: "Noto Serif", serif;
   font-size: clamp(8rem, 26vw, 16rem);
   font-weight: 700;
   line-height: 0.8;
@@ -501,7 +501,7 @@ p {
   border: 1px solid rgba(212, 175, 55, 0.4);
   border-radius: 50%;
   color: var(--gold);
-  font-family: "Cinzel", serif;
+  font-family: "Noto Serif", serif;
   font-weight: 800;
 }
 
@@ -543,7 +543,7 @@ p {
 .review-slide p {
   margin: 0 0 18px;
   color: var(--ink);
-  font-family: "Playfair Display", serif;
+  font-family: "Noto Serif", serif;
   font-size: clamp(1.4rem, 3vw, 2.1rem);
   line-height: 1.25;
 }
@@ -669,7 +669,7 @@ cite {
 .price {
   margin: 20px 0;
   color: var(--gold);
-  font-family: "Cinzel", serif;
+  font-family: "Noto Serif", serif;
   font-size: clamp(2.8rem, 7vw, 4.8rem);
   font-weight: 700;
   line-height: 1;
@@ -679,7 +679,7 @@ cite {
   display: block;
   margin-top: 8px;
   color: rgba(255, 250, 243, 0.8);
-  font-family: "Inter", sans-serif;
+  font-family: "Be Vietnam Pro", sans-serif;
   font-size: 0.96rem;
 }
 
@@ -875,7 +875,7 @@ cite {
 
 .site-footer strong {
   color: var(--gold);
-  font-family: "Cinzel", serif;
+  font-family: "Noto Serif", serif;
 }
 
 .site-footer p {
