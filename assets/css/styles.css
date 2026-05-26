@@ -977,6 +977,16 @@ cite {
   color: #d4af37;
 }
 
+
+/* Underline the address text inside footer-location */
+.footer-location > span:last-child {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--gold);
+  text-underline-offset: 3px;
+}
+
+
 .location-icon {
   color: #d43a37;
   font-size: 1.2rem;
