@@ -1,4 +1,33 @@
 const STORAGE_KEY = "nhip-bac-language";
+const poster = document.getElementById("anniversaryPoster");
+const modal = document.getElementById("posterModal");
+const modalPoster = document.getElementById("modalPoster");
+const closeModal = document.querySelector(".close-modal");
+
+// Mở modal
+poster.addEventListener("click", () => {
+  modal.classList.add("active");
+  modalPoster.src = poster.src;
+});
+
+// Đóng modal bằng nút X
+closeModal.addEventListener("click", () => {
+  modal.classList.remove("active");
+});
+
+// Click ra ngoài để đóng
+modal.addEventListener("click", (e) => {
+  if (e.target === modal) {
+    modal.classList.remove("active");
+  }
+});
+
+// ESC để đóng
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    modal.classList.remove("active");
+  }
+});
 
 const pageMap = {
   home: "index.html",

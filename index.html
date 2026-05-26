@@ -21,7 +21,7 @@
       <a class="brand" href="index.html" aria-label="Nhíp Bạc home">
         <img class="brand-logo" src="assets/nhip-bac-images/logo.jpg" alt="Nhíp Bạc logo" />
         <span>
-          <strong>Nhíp Bạc</strong>
+          <strong>Tiệm Nhíp Bạc</strong>
           <small>Grey Hair Plucking</small>
         </span>
       </a>
@@ -82,8 +82,21 @@
       <section class="anniversary-section">
         <div class="container anniversary-grid">
           <figure class="poster-frame reveal">
-            <img src="assets/nhip-bac-images/4-nam-nhip-bac.jpg" data-src-vi="assets/nhip-bac-images/4-nam-nhip-bac.jpg" data-src-en="assets/nhip-bac-images/4-nam-nhip-bac-eng.jpg" loading="lazy" alt="Poster kỷ niệm 4 năm Nhíp Bạc" />
+            <img
+              id="anniversaryPoster"
+              src="assets/nhip-bac-images/4-nam-nhip-bac.jpg"
+              data-src-vi="assets/nhip-bac-images/4-nam-nhip-bac.jpg"
+              data-src-en="assets/nhip-bac-images/4-nam-nhip-bac-eng.jpg"
+              loading="lazy"
+              alt="Poster kỷ niệm 4 năm Nhíp Bạc"
+            />
           </figure>
+
+          <!-- Modal -->
+          <div class="poster-modal" id="posterModal">
+            <span class="close-modal">&times;</span>
+            <img id="modalPoster" src="" alt="Poster preview" />
+          </div>
           <div class="reveal">
             <p class="eyebrow" data-i18n data-vi="Years Anniversary" data-en="Years Anniversary">Years Anniversary</p>
             <h2 data-i18n data-vi="Bốn năm chăm chút từng sợi tóc bạc" data-en="Four years of careful grey hair care">
