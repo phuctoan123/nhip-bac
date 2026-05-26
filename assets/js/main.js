@@ -321,6 +321,22 @@ function initPosterLightbox() {
       cursor: pointer;
       user-select: none;
     }
+
+    .page-swipe-transition {
+      transition:
+        transform .45s cubic-bezier(.22,1,.36,1),
+        opacity .45s ease;
+    }
+
+    .page-swipe-transition.is-swiping-left {
+      transform: translateX(-100px);
+      opacity: .2;
+    }
+
+    .page-swipe-transition.is-swiping-right {
+      transform: translateX(100px);
+      opacity: .2;
+    }
   `;
 
   document.head.append(style);
@@ -364,6 +380,54 @@ function initPosterLightbox() {
   });
 }
 
+function initMobileSwipeNavigation() {
+  if (window.innerWidth > 768) return;
+
+  const pages = Object.values(pageMap);
+  const currentPath = window.location.pathname.split("/").pop() || "index.html";
+  const currentIndex = pages.indexOf(currentPath);
+
+  if (currentIndex === -1) return;
+
+  let touchStartX = 0;
+  let touchEndX = 0;
+  let touchStartY = 0;
+
+  document.body.classList.add("page-swipe-transition");
+
+  window.addEventListener("touchstart", (event) => {
+    touchStartX = event.changedTouches[0].screenX;
+    touchStartY = event.changedTouches[0].screenY;
+  }, { passive: true });
+
+  window.addEventListener("touchend", (event) => {
+    touchEndX = event.changedTouches[0].screenX;
+    const touchEndY = event.changedTouches[0].screenY;
+
+    const deltaX = touchEndX - touchStartX;
+    const deltaY = touchEndY - touchStartY;
+
+    if (Math.abs(deltaY) > Math.abs(deltaX)) return;
+    if (Math.abs(deltaX) < 90) return;
+
+    if (deltaX < 0 && currentIndex < pages.length - 1) {
+      document.body.classList.add("is-swiping-left");
+
+      window.setTimeout(() => {
+        window.location.href = pages[currentIndex + 1];
+      }, 320);
+    }
+
+    if (deltaX > 0 && currentIndex > 0) {
+      document.body.classList.add("is-swiping-right");
+
+      window.setTimeout(() => {
+        window.location.href = pages[currentIndex - 1];
+      }, 320);
+    }
+  }, { passive: true });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   initLanguage();
   initNavigation();
@@ -373,4 +437,5 @@ document.addEventListener("DOMContentLoaded", () => {
   initBookingForm();
   initHeroCanvas();
   initPosterLightbox();
+  initMobileSwipeNavigation();
 });
