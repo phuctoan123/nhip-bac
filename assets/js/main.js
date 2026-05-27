@@ -14,9 +14,24 @@ function setLanguage(lang) {
   document.documentElement.lang = activeLang;
   localStorage.setItem(STORAGE_KEY, activeLang);
 
+  // Update text content for all i18n elements
   document.querySelectorAll("[data-i18n]").forEach((node) => {
     const value = node.dataset[activeLang];
     if (value) node.textContent = value;
+  });
+
+  // Update image sources based on language
+  document.querySelectorAll("img[data-src-vi][data-src-en]").forEach((img) => {
+    const src = activeLang === "en" ? img.dataset.srcEn : img.dataset.srcVi;
+    if (src) img.src = src;
+  });
+
+  // Update active button state
+  document.querySelectorAll(".lang-btn").forEach((button) => {
+    button.classList.remove("is-active");
+    if (button.dataset.lang === activeLang) {
+      button.classList.add("is-active");
+    }
   });
 }
 
@@ -59,6 +74,40 @@ function initReveal() {
   });
 
   items.forEach((item) => observer.observe(item));
+}
+
+function initCarousel() {
+  const carousel = document.querySelector(".review-carousel");
+  if (!carousel) return;
+
+  const slides = carousel.querySelectorAll(".review-slide");
+  const dotsContainer = carousel.querySelector(".carousel-dots");
+  
+  if (slides.length === 0 || !dotsContainer) return;
+
+  let currentIndex = 0;
+
+  // Generate carousel dots
+  slides.forEach((_, index) => {
+    const dot = document.createElement("span");
+    dot.classList.add("carousel-dot");
+    if (index === 0) dot.classList.add("is-active");
+    dot.addEventListener("click", () => goToSlide(index));
+    dotsContainer.appendChild(dot);
+  });
+
+  function goToSlide(index) {
+    slides[currentIndex].classList.remove("is-active");
+    dotsContainer.children[currentIndex].classList.remove("is-active");
+    currentIndex = index;
+    slides[currentIndex].classList.add("is-active");
+    dotsContainer.children[currentIndex].classList.add("is-active");
+  }
+
+  // Auto-rotate every 6 seconds
+  setInterval(() => {
+    goToSlide((currentIndex + 1) % slides.length);
+  }, 6000);
 }
 
 function initMobileSwipeNavigation() {
@@ -206,7 +255,7 @@ function initFloatingSocialMenu() {
 
         <a
           class="social-link social-facebook"
-          href="https://facebook.com"
+          href="https://facebook.com/nhipbac"
           target="_blank"
           rel="noopener"
           aria-label="Facebook"
@@ -216,7 +265,7 @@ function initFloatingSocialMenu() {
 
         <a
           class="social-link social-instagram"
-          href="https://instagram.com"
+          href="https://instagram.com/nhipbac"
           target="_blank"
           rel="noopener"
           aria-label="Instagram"
@@ -235,7 +284,7 @@ function initFloatingSocialMenu() {
 
         <a
           class="social-link social-tiktok"
-          href="https://tiktok.com"
+          href="https://tiktok.com/@nhipbac"
           target="_blank"
           rel="noopener"
           aria-label="TikTok"
@@ -261,6 +310,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initLanguage();
   initNavigation();
   initReveal();
+  initCarousel();
   initMobileSwipeNavigation();
   initFloatingSocialMenu();
 });
