@@ -91,7 +91,7 @@
             <img src="assets/nhip-bac-images/4-nam-nhip-bac.jpg" data-src-vi="assets/nhip-bac-images/4-nam-nhip-bac.jpg" data-src-en="assets/nhip-bac-images/4-nam-nhip-bac-eng.jpg" loading="lazy" alt="Poster kỷ niệm 4 năm Nhíp Bạc" />
           </figure>
           <div class="reveal">
-            <p class="eyebrow" data-i18n data-vi="4th Years Anniversary" data-en="4th Years Anniversary">4th Years Anniversary</p>
+            <p class="eyebrow" data-i18n data-vi="4th Anniversary" data-en="4th Anniversary">4th Anniversary</p>
             <h2 data-i18n data-vi="Bốn năm chăm chút từng sợi tóc bạc" data-en="Four years of careful grey hair care">
               Bốn năm chăm chút từng sợi tóc bạc
             </h2>
@@ -205,6 +205,10 @@
             >
               12 Hưng Gia 4 Street, Phường Tân Hưng, Quận 7, TP.HCM, Việt Nam
             </span>
+             <!-- Map  -->
+            <section class="map-section">
+            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3920.0259807161297!2d106.7080122!3d10.732479499999998!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31752f088bd60773%3A0x41330db82562dcb8!2zTmjhu5UgdMOzYyBi4bqhYyAtIE5ow61wIELhuqFj!5e0!3m2!1sen!2s!4v1779809642524!5m2!1sen!2s" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+          </section>
           </a>
         </div>
 
@@ -213,10 +217,10 @@
           <p
             class="qr-title"
             data-i18n
-            data-vi="Quét mã Zalo"
-            data-en="Scan Zalo QR"
+            data-vi="Quét mã Zalo để đặt lịch hẹn"
+            data-en="Scan Zalo QR for booking"
           >
-            Quét mã Zalo
+            Quét mã Zalo để đặt lịch hẹn
           </p>
 
           <img
@@ -224,18 +228,72 @@
             alt="Zalo QR"
             loading="lazy"
           />
+          <img
+            src="assets/nhip-bac-images/zalo-qr1.png"
+            alt="Zalo QR"
+            loading="lazy"
+          />
         </div>
 
         <div>
-          <a href="tel:0934013486">Ms. Dung: 0934 013 486</a>
-          <a href="tel:0356735783">Ms. Châu: 0356 735 783</a>
+          <a href="tel:0934013486"><i class="fa-solid fa-phone" style="color: rgb(116, 192, 252);"></i> Ms. Dung: 0934 01 3486</a>
+          <a href="tel:0356735783"><i class="fa-solid fa-phone" style="color: rgb(116, 192, 252);"></i> Ms. Châu: 0356 735 783</a>
         </div>
 
         
       </div>
     </footer>
 
-    <a class="floating-zalo" href="https://zalo.me/0934013486" target="_blank" rel="noopener">Zalo</a>
+    <div class="social-floating-dock">
+      <a class="dock-item"
+          href="https://zalo.me/0934013486"
+          target="_blank"
+          rel="noopener"
+          aria-label="Zalo"
+          style="
+            background-color: #007AFF;
+            color: white;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;">
+          <span>Zalo</span>
+      </a>
+
+      
+      
+      <a class="dock-item" href="https://tiktok.com/@nhipbac" target="_blank" rel="noopener" aria-label="TikTok">
+        <i class="fa-brands fa-tiktok"></i>
+        
+        <span class="dock-label">TikTok</span>
+      </a>
+      <a class="dock-item" href="https://facebook.com/nhipbac" target="_blank" rel="noopener" aria-label="Facebook">
+        <i class="fa-brands fa-facebook-f" style="color: rgb(53, 138, 207);"></i>
+        <span class="dock-label">Facebook</span>
+      </a>
+      <a class="dock-item" href="https://instagram.com/nhipbac" target="_blank" rel="noopener" aria-label="Instagram">
+        <i class="fa-brands fa-instagram insta-icon"></i>
+
+        <style>
+        .insta-icon {
+          font-size: 40px;
+          background: radial-gradient(circle at 30% 107%,
+            #fdf497 0%,
+            #fdf497 5%,
+            #fd5949 45%,
+            #d6249f 60%,
+            #285AEB 90%);
+            
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+        }
+        </style>
+        <span class="dock-label">Instagram</span>
+      </a>
+    </div>
     <script src="assets/js/main.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js"></script>
   </body>
