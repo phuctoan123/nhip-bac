@@ -162,10 +162,102 @@ function initFloatingSocialDock() {
   // No JavaScript initialization needed - hover animations handled by CSS
 }
 
+function initPosterLightbox() {
+  const posterFrames = document.querySelectorAll(".poster-frame");
+  
+  posterFrames.forEach((frame) => {
+    frame.addEventListener("click", () => {
+      const img = frame.querySelector("img");
+      if (!img) return;
+
+      const modal = document.createElement("div");
+      modal.className = "poster-modal active";
+      
+      const modalImg = document.createElement("img");
+      modalImg.src = img.src;
+      modalImg.alt = img.alt;
+      
+      const closeBtn = document.createElement("button");
+      closeBtn.className = "poster-modal-close";
+      closeBtn.innerHTML = "×";
+      closeBtn.type = "button";
+      closeBtn.setAttribute("aria-label", "Close lightbox");
+      
+      modal.appendChild(modalImg);
+      modal.appendChild(closeBtn);
+      document.body.appendChild(modal);
+      
+      const closeModal = () => {
+        modal.classList.remove("active");
+        setTimeout(() => modal.remove(), 300);
+      };
+      
+      closeBtn.addEventListener("click", closeModal);
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) closeModal();
+      });
+      
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeModal();
+      }, { once: true });
+    });
+  });
+}
+
+function initMagnifier() {
+  const logoImg = document.querySelector(".brand-logo");
+  if (!logoImg) return;
+
+  const lens = document.createElement("div");
+  lens.className = "magnifier-lens";
+  document.body.appendChild(lens);
+
+  const lensSize = 120;
+  const zoom = 2.6; // 6x magnification (264/44 = 6x for 44px logo)
+
+  logoImg.addEventListener("mouseenter", () => {
+    lens.classList.add("active");
+  });
+
+  logoImg.addEventListener("mouseleave", () => {
+    lens.classList.remove("active");
+  });
+
+  logoImg.addEventListener("mousemove", (e) => {
+    const rect = logoImg.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // Check if cursor is within logo bounds
+    if (x < 0 || y < 0 || x > rect.width || y > rect.height) {
+      lens.classList.remove("active");
+      return;
+    }
+
+    lens.classList.add("active");
+
+    // Position the lens centered on cursor
+    const lensX = e.clientX - lensSize / 2;
+    const lensY = e.clientY - lensSize / 2;
+
+    lens.style.left = lensX + "px";
+    lens.style.top = lensY + "px";
+
+    // Calculate magnified background position
+    const bgX = x * zoom;
+    const bgY = y * zoom;
+
+    lens.style.backgroundImage = `url('${logoImg.src}')`;
+    lens.style.backgroundPosition = `${-bgX + lensSize / 2}px ${-bgY + lensSize / 2}px`;
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   initLanguage();
   initNavigation();
   initReveal();
   initCarousel();
   initMobileSwipeNavigation();
+  initPosterLightbox();
+  initMagnifier();
 });
