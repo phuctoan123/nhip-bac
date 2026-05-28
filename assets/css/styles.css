@@ -1096,12 +1096,40 @@ cite {
   background: #fff;
 }
 
+.qr-codes-row {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+
+.qr-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.qr-item p {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0;
+  text-align: center;
+}
+
 .map-section iframe {
   display: block;
   width: 100%;
   height: 380px;
   border: 0;
   filter: saturate(0.8) contrast(1.05);
+}
+
+.map-section {
+  margin-top: 5px;
+  padding-top: 40px;
+  border-top: 1px solid rgba(212, 175, 55, 0.2);
 }
 
 .review-card span {
@@ -1193,14 +1221,11 @@ cite {
 .footer-qr img {
   width: 240px;
   height: 240px;
-
+  margin-top: 30px;
   object-fit: cover;
-
   border-radius: 20px;
-
   background: white;
   padding: 10px;
-
   transition:
     transform 0.4s ease,
     box-shadow 0.4s ease;
