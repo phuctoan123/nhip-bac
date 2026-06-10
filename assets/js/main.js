@@ -278,6 +278,7 @@ function initSocialDockSwipeVertical() {
   let isHidden = localStorage.getItem(STORAGE_KEY) === "true";
 
   let touchStartY = 0;
+  let isDragging = false;
 
   function showDock() {
     dock.classList.remove('hidden');
@@ -290,26 +291,41 @@ function initSocialDockSwipeVertical() {
     localStorage.setItem(STORAGE_KEY, "true");
   }
 
-  // Swipe detection - theo chiều dọc
+  // Touch events
   dock.addEventListener('touchstart', (e) => {
     touchStartY = e.changedTouches[0].screenY;
-  }, { passive: true });
+    isDragging = true;
+  }, { passive: false });
+
+  dock.addEventListener('touchmove', (e) => {
+    if (!isDragging) return;
+    const currentY = e.changedTouches[0].screenY;
+    const deltaY = currentY - touchStartY;
+
+    // Nếu quẹt xuống khá mạnh → ngăn scroll trang
+    if (deltaY > 30) {
+      e.preventDefault();   // Ngăn scroll trang
+    }
+  }, { passive: false });
 
   dock.addEventListener('touchend', (e) => {
+    if (!isDragging) return;
+    isDragging = false;
+
     const touchEndY = e.changedTouches[0].screenY;
     const deltaY = touchEndY - touchStartY;
 
-    // Quẹt xuống (ẩn)
-    if (deltaY > 70) {
+    // Quẹt xuống (ẩn) - ngưỡng cao hơn để tránh nhầm scroll
+    if (deltaY > 100) {
       hideDock();
     }
     // Quẹt lên (hiện)
-    else if (deltaY < -70 && dock.classList.contains('hidden')) {
+    else if (deltaY < -90 && dock.classList.contains('hidden')) {
       showDock();
     }
-  }, { passive: true });
+  }, { passive: false });
 
-  // Khởi tạo trạng thái khi load trang
+  // Khởi tạo
   if (isHidden) {
     dock.classList.add('hidden');
   } else {
