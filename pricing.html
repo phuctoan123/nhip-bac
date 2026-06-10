@@ -9,6 +9,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Noto+Serif:wght@600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="assets/css/styles.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    />
   </head>
   <body data-page="pricing">
     <header class="site-header">
@@ -44,6 +48,59 @@
     </main>
     <footer class="site-footer"><div class="container footer-grid"><div><strong>Nhíp Bạc - Grey Hair Plucking</strong><p>No.12, Hùng Gia 4 Street, Tân Hưng Ward, District 7, Ho Chi Minh City</p></div><div><a href="tel:0934013486"><i class="fa-solid fa-phone" style="color: rgb(116, 192, 252);"></i> Ms. Dung: 0934 013 486</a><a href="tel:0356735783"><i class="fa-solid fa-phone" style="color: rgb(116, 192, 252);"></i> Ms. Châu: 0356 735 783</a></div></div></footer>
     <a class="floating-zalo" href="https://zalo.me/0934013486" target="_blank" rel="noopener">Zalo</a>
+
+
+    <!-- Icon floating dock -->
+    <div class="social-floating-dock">
+      <a class="dock-item"
+          href="https://zalo.me/0934013486"
+          target="_blank"
+          rel="noopener"
+          aria-label="Zalo"
+          style="
+            background-color: #007AFF;
+            color: white;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;">
+          <span>Zalo</span>
+          <span class="dock-label">Zalo</span>
+      </a>
+
+      <a class="dock-item" href="https://tiktok.com/@nhipbac" target="_blank" rel="noopener" aria-label="TikTok">
+        <i class="fa-brands fa-tiktok"></i>
+        <span class="dock-label">TikTok</span>
+      </a>
+      <a class="dock-item" href="https://facebook.com/nhipbac" target="_blank" rel="noopener" aria-label="Facebook">
+        <i class="fa-brands fa-facebook-f" style="color: rgb(53, 138, 207);"></i>
+        <span class="dock-label">Facebook</span>
+      </a>
+      <a class="dock-item" href="https://instagram.com/nhipbac" target="_blank" rel="noopener" aria-label="Instagram">
+        <i class="fa-brands fa-instagram insta-icon"></i>
+
+        <style>
+        .insta-icon {
+          font-size: 40px;
+          background: radial-gradient(circle at 30% 107%,
+            #fdf497 0%,
+            #fdf497 5%,
+            #fd5949 45%,
+            #d6249f 60%,
+            #285AEB 90%);
+            
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+        }
+        </style>
+        <span class="dock-label">Instagram</span>
+      </a>
+    </div>
+
     <script src="assets/js/main.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js"></script>
   </body>
 </html>

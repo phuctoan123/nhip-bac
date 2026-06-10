@@ -252,7 +252,76 @@ function initMagnifier() {
   });
 }
 
+
+function initSocialDockAnimation() {
+  const socialDock = document.querySelector('.social-floating-dock');
+  if (!socialDock) return;
+
+  // Đợi một chút cho trang load xong
+  setTimeout(() => {
+    socialDock.classList.add('show');
+
+    // Hiển thị từng item
+    const items = socialDock.querySelectorAll('.dock-item');
+    items.forEach((item, index) => {
+      setTimeout(() => {
+        item.classList.add('show');
+      }, 200 + index * 150); // stagger effect
+    });
+  }, 800); // Delay tổng khi trang load
+}
+
+function initSocialDockSwipe() {
+  const dock = document.getElementById('socialDock');
+  if (!dock) return;
+
+  const STORAGE_KEY = "social-dock-hidden";
+  let isHidden = localStorage.getItem(STORAGE_KEY) === "true";
+
+  let touchStartX = 0;
+
+  function showDock() {
+    dock.classList.remove('hidden');
+    dock.classList.add('show');
+    localStorage.setItem(STORAGE_KEY, "false");
+  }
+
+  function hideDock() {
+    dock.classList.add('hidden');
+    localStorage.setItem(STORAGE_KEY, "true");
+  }
+
+  // Swipe detection
+  dock.addEventListener('touchstart', (e) => {
+    touchStartX = e.changedTouches[0].screenX;
+  }, { passive: true });
+
+  dock.addEventListener('touchend', (e) => {
+    const touchEndX = e.changedTouches[0].screenX;
+    const deltaX = touchEndX - touchStartX;
+
+    // Quẹt sang phải (ẩn)
+    if (deltaX > 80) {
+      hideDock();
+    }
+    // Quẹt sang trái (hiện) - chỉ có tác dụng khi đang ẩn
+    else if (deltaX < -80 && dock.classList.contains('hidden')) {
+      showDock();
+    }
+  }, { passive: true });
+
+  // Khởi tạo trạng thái
+  if (isHidden) {
+    dock.classList.add('hidden');
+  } else {
+    setTimeout(() => {
+      dock.classList.add('show');
+    }, 600);
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+
   initLanguage();
   initNavigation();
   initReveal();
@@ -260,4 +329,6 @@ document.addEventListener("DOMContentLoaded", () => {
   initMobileSwipeNavigation();
   initPosterLightbox();
   initMagnifier();
+  initSocialDockAnimation();
+  initSocialDockSwipe();
 });
