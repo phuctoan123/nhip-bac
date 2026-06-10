@@ -1251,12 +1251,12 @@ cite {
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), inset 1px 1px 0 rgba(255, 255, 255, 0.2);
   opacity: 0;
-  transform: translateY(30px);
+  transition: transform 0.55s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.45s ease;
   transition: all 0.6s ease;
 }
 
 .social-floating-dock.hidden {
-  transform: translateX(120px);   /* Trượt sang phải */
+  transform: translateY(160px);   /* Trượt xuống dưới */
   opacity: 0;
   pointer-events: none;
 }
@@ -1264,7 +1264,6 @@ cite {
 
 .social-floating-dock.show {
   opacity: 1;
-  transform: translateX(0);
   transform: translateY(0);
 }
 

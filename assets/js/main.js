@@ -270,15 +270,14 @@ function initSocialDockAnimation() {
     });
   }, 800); // Delay tổng khi trang load
 }
-
-function initSocialDockSwipe() {
+function initSocialDockSwipeVertical() {
   const dock = document.getElementById('socialDock');
   if (!dock) return;
 
   const STORAGE_KEY = "social-dock-hidden";
   let isHidden = localStorage.getItem(STORAGE_KEY) === "true";
 
-  let touchStartX = 0;
+  let touchStartY = 0;
 
   function showDock() {
     dock.classList.remove('hidden');
@@ -291,32 +290,32 @@ function initSocialDockSwipe() {
     localStorage.setItem(STORAGE_KEY, "true");
   }
 
-  // Swipe detection
+  // Swipe detection - theo chiều dọc
   dock.addEventListener('touchstart', (e) => {
-    touchStartX = e.changedTouches[0].screenX;
+    touchStartY = e.changedTouches[0].screenY;
   }, { passive: true });
 
   dock.addEventListener('touchend', (e) => {
-    const touchEndX = e.changedTouches[0].screenX;
-    const deltaX = touchEndX - touchStartX;
+    const touchEndY = e.changedTouches[0].screenY;
+    const deltaY = touchEndY - touchStartY;
 
-    // Quẹt sang phải (ẩn)
-    if (deltaX > 80) {
+    // Quẹt xuống (ẩn)
+    if (deltaY > 70) {
       hideDock();
     }
-    // Quẹt sang trái (hiện) - chỉ có tác dụng khi đang ẩn
-    else if (deltaX < -80 && dock.classList.contains('hidden')) {
+    // Quẹt lên (hiện)
+    else if (deltaY < -70 && dock.classList.contains('hidden')) {
       showDock();
     }
   }, { passive: true });
 
-  // Khởi tạo trạng thái
+  // Khởi tạo trạng thái khi load trang
   if (isHidden) {
     dock.classList.add('hidden');
   } else {
     setTimeout(() => {
       dock.classList.add('show');
-    }, 600);
+    }, 700);
   }
 }
 
@@ -330,5 +329,5 @@ document.addEventListener("DOMContentLoaded", () => {
   initPosterLightbox();
   initMagnifier();
   initSocialDockAnimation();
-  initSocialDockSwipe();
+  initSocialDockSwipeVertical();
 });
