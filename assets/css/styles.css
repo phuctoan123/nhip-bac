@@ -167,6 +167,10 @@ textarea {
   transition: width 0.22s ease;
 }
 
+.site-nav a.is-active {
+  color: var(--gold);
+}
+
 .site-nav a:hover::after,
 .site-nav a.is-active::after {
   width: 100%;

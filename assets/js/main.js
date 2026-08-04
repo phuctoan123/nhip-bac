@@ -43,6 +43,26 @@ function initLanguage() {
   setLanguage(saved);
 }
 
+function initActiveNav() {
+  const nav = document.querySelector(".site-nav");
+  const body = document.body;
+  if (!nav || !body || !body.dataset.page) return;
+
+  const currentPage = body.dataset.page;
+  const currentFile = pageMap[currentPage];
+
+  nav.querySelectorAll("a").forEach((link) => {
+    const href = link.getAttribute("href");
+    if (!href) return;
+
+    const file = href.split("/").pop().split("?")[0].split("#")[0];
+    if (file === currentFile) {
+      link.classList.add("is-active");
+      link.setAttribute("aria-current", "page");
+    }
+  });
+}
+
 function initNavigation() {
   const toggle = document.querySelector(".nav-toggle");
   const nav = document.querySelector(".site-nav");
@@ -338,6 +358,7 @@ function initSocialDockSwipeVertical() {
 document.addEventListener("DOMContentLoaded", () => {
 
   initLanguage();
+  initActiveNav();
   initNavigation();
   initReveal();
   initCarousel();
