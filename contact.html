@@ -36,10 +36,16 @@
           <form class="booking-form reveal" id="bookingForm">
             <label><span data-i18n data-vi="Họ tên" data-en="Full name">Họ tên</span><input name="name" type="text" required placeholder="Nguyễn An" data-placeholder-vi="Họ và tên" data-placeholder-en="Your name" /></label>
             <label><span data-i18n data-vi="Số điện thoại" data-en="Phone">Số điện thoại</span><input name="phone" type="tel" required placeholder="09xx xxx xxx" /></label>
-            <label><span data-i18n data-vi="Dịch vụ" data-en="Service">Dịch vụ</span><select name="service"><option>Nhíp Bạc - Grey Hair Plucking</option><option>Visa & Du lịch Nhật Bản</option></select></label>
-            <label><span data-i18n data-vi="Thời gian mong muốn" data-en="Preferred time">Thời gian mong muốn</span><input name="time" type="text" placeholder="Thứ Bảy, 14:00" data-placeholder-vi="Thứ Bảy, 14:00" data-placeholder-en="Saturday, 2:00 PM" /></label>
+            <label><span data-i18n data-vi="Dịch vụ" data-en="Service">Dịch vụ</span><select name="service" id="bookingService"></select></label>
+            <div class="calendar-field">
+              <span class="field-label" data-i18n data-vi="Ngày mong muốn" data-en="Preferred date">Ngày mong muốn</span>
+              <input name="date" id="bookingDate" type="hidden" required />
+              <button type="button" class="calendar-trigger" id="calendarTrigger" aria-expanded="false" aria-controls="bookingCalendar">Chọn ngày đến</button>
+              <div class="booking-calendar" id="bookingCalendar" aria-label="Chọn ngày đặt lịch"></div>
+            </div>
+            <label><span data-i18n data-vi="Giờ mong muốn" data-en="Preferred time">Giờ mong muốn</span><input name="time" type="text" placeholder="Thứ Bảy, 14:00" data-placeholder-vi="Thứ Bảy, 14:00" data-placeholder-en="Saturday, 2:00 PM" /></label>
             <label><span data-i18n data-vi="Ghi chú" data-en="Note">Ghi chú</span><textarea name="note" rows="4" placeholder="Tôi muốn đặt lịch..." data-placeholder-vi="Tôi muốn đặt lịch..." data-placeholder-en="I would like to book..."></textarea></label>
-            <button class="btn btn-primary" type="submit" data-i18n data-vi="Gửi qua Zalo" data-en="Send via Zalo">Gửi qua Zalo</button>
+            <button class="btn btn-primary" type="submit" data-i18n data-vi="Gửi yêu cầu đặt lịch" data-en="Submit booking request">Gửi yêu cầu đặt lịch</button><p id="bookingMessage" role="status"></p>
           </form>
           <aside class="contact-panel reveal">
             <img class="contact-photo" src="assets/nhip-bac-images/location.jpg" loading="lazy" alt="Địa điểm Nhíp Bạc tại Hùng Gia 4" />
@@ -129,7 +135,7 @@
     </div>
 
 
-    <script src="assets/js/main.js" defer></script>
+    <script src="assets/js/storage.js"></script><script src="assets/js/main.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js"></script>
   </body>
 </html>

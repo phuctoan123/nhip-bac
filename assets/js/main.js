@@ -355,6 +355,103 @@ function initSocialDockSwipeVertical() {
   }
 }
 
+function initBookingCalendar() {
+  const root = document.getElementById("bookingCalendar");
+  const input = document.getElementById("bookingDate");
+  const trigger = document.getElementById("calendarTrigger");
+  if (!root || !input || !trigger) return;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  let viewDate = new Date(today.getFullYear(), today.getMonth(), 1);
+  let selected = input.value ? new Date(`${input.value}T00:00:00`) : null;
+  const months = ["tháng 1", "tháng 2", "tháng 3", "tháng 4", "tháng 5", "tháng 6", "tháng 7", "tháng 8", "tháng 9", "tháng 10", "tháng 11", "tháng 12"];
+  const weekdays = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
+  const iso = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  const sameDay = (a, b) => a && b && iso(a) === iso(b);
+
+  function render() {
+    const year = viewDate.getFullYear();
+    const month = viewDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const offset = (firstDay.getDay() + 6) % 7;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const cells = [];
+    for (let i = 0; i < 42; i += 1) {
+      const dayNumber = i - offset + 1;
+      const date = new Date(year, month, dayNumber);
+      const outside = date.getMonth() !== month;
+      const disabled = date < today;
+      cells.push(`<button type="button" class="calendar-day${outside ? " is-outside" : ""}${sameDay(date, today) ? " is-today" : ""}${sameDay(date, selected) ? " is-selected" : ""}" data-date="${iso(date)}" aria-label="${date.toLocaleDateString("vi-VN", { dateStyle: "full" })}"${disabled ? " disabled" : ""}>${date.getDate()}</button>`);
+    }
+    trigger.textContent = selected ? `Ngày đã chọn: ${selected.toLocaleDateString("vi-VN", { dateStyle: "full" })}` : "Chọn ngày đến";
+    root.innerHTML = `<div class="calendar-header"><strong class="calendar-month">${months[month]} ${year}</strong><div class="calendar-nav"><button type="button" data-calendar-prev aria-label="Tháng trước">‹</button><button type="button" data-calendar-next aria-label="Tháng sau">›</button></div></div><div class="calendar-weekdays">${weekdays.map(day => `<span>${day}</span>`).join("")}</div><div class="calendar-grid">${cells.join("")}</div><p class="calendar-hint">${selected ? `Đã chọn: ${selected.toLocaleDateString("vi-VN", { dateStyle: "full" })}` : "Chọn ngày bạn muốn đến Nhíp Bạc"}</p>`;
+    root.querySelector("[data-calendar-prev]").addEventListener("click", () => { viewDate = new Date(year, month - 1, 1); render(); });
+    root.querySelector("[data-calendar-next]").addEventListener("click", () => { viewDate = new Date(year, month + 1, 1); render(); });
+    root.querySelectorAll("[data-date]:not(:disabled)").forEach(button => button.addEventListener("click", () => { selected = new Date(`${button.dataset.date}T00:00:00`); input.value = button.dataset.date; input.dispatchEvent(new Event("change", { bubbles: true })); root.classList.remove("is-open"); trigger.setAttribute("aria-expanded", "false"); render(); }));
+  }
+  trigger.addEventListener("click", () => { const isOpen = root.classList.toggle("is-open"); trigger.setAttribute("aria-expanded", String(isOpen)); });
+  document.getElementById("bookingForm")?.addEventListener("reset", () => {
+    selected = null;
+    viewDate = new Date(today.getFullYear(), today.getMonth(), 1);
+    root.classList.remove("is-open");
+    trigger.setAttribute("aria-expanded", "false");
+    setTimeout(render, 0);
+  });
+  render();
+}
+
+function playBookingSuccessSound() {
+  const audio = new Audio("assets/audio/booking-success.mp3");
+  audio.volume = 0.55;
+  audio.play().catch(() => {
+    // Graceful fallback while the optional MP3 has not been added yet.
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const context = new AudioContext();
+    [523.25, 659.25, 783.99].forEach((frequency, index) => {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      oscillator.type = "sine";
+      oscillator.frequency.value = frequency;
+      gain.gain.setValueAtTime(0.0001, context.currentTime + index * 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.18, context.currentTime + index * 0.12 + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + index * 0.12 + 0.42);
+      oscillator.connect(gain).connect(context.destination);
+      oscillator.start(context.currentTime + index * 0.12);
+      oscillator.stop(context.currentTime + index * 0.12 + 0.45);
+    });
+  });
+}
+
+function showBookingSuccess(record) {
+  document.querySelector(".booking-success-overlay")?.remove();
+  const overlay = document.createElement("div");
+  overlay.className = "booking-success-overlay";
+  overlay.innerHTML = `<div class="booking-success-card" role="dialog" aria-modal="true" aria-labelledby="bookingSuccessTitle"><div class="success-spark success-spark-one"></div><div class="success-spark success-spark-two"></div><div class="success-check">✓</div><p class="eyebrow">Nhíp Bạc · Booking received</p><h2 id="bookingSuccessTitle">Đặt lịch thành công!</h2><p>Cảm ơn <strong>${String(record.customerName).replace(/[&<>"']/g, "")}</strong>. Yêu cầu của bạn đã được ghi nhận.</p><div class="success-summary"><span>Mã yêu cầu</span><strong>${record.id}</strong></div><button type="button" class="btn btn-primary" data-close-success>Đã hiểu</button></div>`;
+  document.body.appendChild(overlay);
+  playBookingSuccessSound();
+  overlay.querySelector("[data-close-success]").addEventListener("click", () => overlay.remove());
+  overlay.addEventListener("click", event => { if (event.target === overlay) overlay.remove(); });
+  setTimeout(() => overlay.remove(), 12000);
+}
+
+function initPublicData() {
+  if (!window.NhipBacStore) return;
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+  const money = (n) => n ? `${new Intl.NumberFormat("vi-VN").format(n)} VND` : "Liên hệ";
+  const services = NhipBacStore.services.all().filter(s => s.visible).sort((a,b) => a.sortOrder-b.sortOrder);
+  const serviceRoot = document.getElementById("publicServices");
+  if (serviceRoot) serviceRoot.innerHTML = services.map((s,i) => `<article class="detail-panel reveal"><figure class="detail-image"><img src="${esc(s.image)}" loading="lazy" alt="${esc(s.nameVi)}"></figure><span class="card-icon">${String(i+1).padStart(2,"0")}</span><h2 data-i18n data-vi="${esc(s.nameVi)}" data-en="${esc(s.nameEn || s.nameVi)}">${esc(s.nameVi)}</h2><p data-i18n data-vi="${esc(s.descriptionVi)}" data-en="${esc(s.descriptionEn || s.descriptionVi)}">${esc(s.descriptionVi)}</p><p><strong>${money(s.price)} / ${esc(s.unit)}</strong><br>${esc(s.priceNote)}</p><a class="btn btn-primary" href="contact.html">Đặt lịch</a></article>`).join("");
+  const pricingRoot = document.getElementById("publicPricing");
+  if (pricingRoot) pricingRoot.innerHTML = `<div class="pricing-card featured tilt-card"><p class="eyebrow">Dịch vụ chính</p><h2>${esc(services[0]?.nameVi || "Chưa có dịch vụ")}</h2><div class="price">${services[0] ? money(services[0].price) : "—"} <span>/ ${esc(services[0]?.unit || "")}</span></div><p>${esc(services[0]?.priceNote || "Vui lòng liên hệ để được tư vấn.")}</p><a class="btn btn-primary" href="contact.html">Đặt lịch</a></div><div class="price-table"><div class="table-row head"><span>Dịch vụ</span><span>Giá</span></div>${services.map(s=>`<div class="table-row"><span>${esc(s.nameVi)}</span><strong>${money(s.price)} / ${esc(s.unit)}</strong></div>`).join("")}</div>`;
+  const reviewRoot = document.getElementById("publicReviews");
+  if (reviewRoot) { const reviews=NhipBacStore.reviews.all().filter(r=>r.status==="published"); reviewRoot.innerHTML=reviews.map(r=>`<article class="review-card reveal"><span>${"★".repeat(r.rating)}</span><p>${esc(r.content)}</p><cite>${esc(r.name)}</cite></article>`).join("") || `<p class="empty-state">Chưa có đánh giá được xuất bản.</p>`; }
+  const select=document.getElementById("bookingService"); if(select) select.innerHTML=services.map(s=>`<option value="${esc(s.id)}">${esc(s.nameVi)}</option>`).join("");
+  const form=document.getElementById("bookingForm");
+  if(form) form.addEventListener("submit", e=>{e.preventDefault();if(form.dataset.submitting==="true")return;const f=new FormData(form), name=String(f.get("name")||"").trim(),phone=String(f.get("phone")||"").trim(),sid=String(f.get("service")||""),service=services.find(s=>s.id===sid),message=document.getElementById("bookingMessage");if(!name||!phone){message.textContent="Vui lòng nhập họ tên và số điện thoại.";message.style.color="#b94a43";return}form.dataset.submitting="true";const record={id:NhipBacStore.id("booking"),customerName:name,phone,serviceId:sid,serviceNameSnapshot:service?.nameVi||"Dịch vụ không xác định",preferredDate:f.get("date")||"",preferredTime:f.get("time")||"",message:f.get("note")||"",createdAt:new Date().toISOString(),status:"new",adminNote:"",updatedAt:new Date().toISOString()};const ok=NhipBacStore.bookings.add(record);message.textContent=ok?"Đã ghi nhận yêu cầu. Nhíp Bạc sẽ liên hệ để xác nhận lịch.":"Không thể lưu yêu cầu trên trình duyệt này.";message.style.color=ok?"#287344":"#b94a43";if(ok){form.reset();showBookingSuccess(record);}setTimeout(()=>form.dataset.submitting="false",700)});
+}
+
 document.addEventListener("DOMContentLoaded", () => {
 
   initLanguage();
@@ -367,4 +464,6 @@ document.addEventListener("DOMContentLoaded", () => {
   initMagnifier();
   initSocialDockAnimation();
   initSocialDockSwipeVertical();
+  initBookingCalendar();
+  initPublicData();
 });
