@@ -41,26 +41,39 @@
       .join("");
   }
   function login() {
-    app.innerHTML = `<main class="login-page"><section class="login-card"><div class="admin-brand"><img src="assets/nhip-bac-images/logo.jpg"><span>Nhíp Bạc<small>ADMIN CONSOLE</small></span></div><h1>Đăng nhập quản trị</h1><p class="notice">Tài khoản demo dành cho phát triển nội bộ. Dữ liệu và phiên đăng nhập chỉ tồn tại trên trình duyệt này.</p><form id="loginForm"><label>Tên đăng nhập<input name="username" autocomplete="username" required></label><label>Mật khẩu<div class="password-wrap"><input name="password" type="password" autocomplete="current-password" required><button type="button" id="togglePassword">Hiện</button></div></label><div class="login-error" id="loginError"></div><button class="admin-btn" type="submit">Đăng nhập</button></form></section></main>`;
-    document.getElementById("togglePassword").onclick = () => {
-      const i = document.querySelector("[name=password]");
-      i.type = i.type === "password" ? "text" : "password";
-    };
-    document.getElementById("loginForm").onsubmit = async (e) => {
-      e.preventDefault();
-      const f = new FormData(e.target),
-        err = document.getElementById("loginError");
-      err.textContent = "Đang kiểm tra…";
-      if (
-        f.get("username") === config.username &&
-        (await sha(f.get("password"))) === config.passwordHash
-      ) {
-        sessionStorage.setItem(SESSION, "active");
-        location.hash = "#dashboard";
-        render();
-      } else err.textContent = "Tên đăng nhập hoặc mật khẩu không đúng.";
-    };
-  }
+  app.innerHTML = `<main class="login-page"><section class="login-card"><div class="admin-brand"><img src="assets/nhip-bac-images/logo.jpg"><span>Nhíp Bạc<small>ADMIN CONSOLE</small></span></div><h1>Đăng nhập quản trị</h1><p class="notice">Tài khoản demo dành cho phát triển nội bộ. Dữ liệu và phiên đăng nhập chỉ tồn tại trên trình duyệt này.</p><form id="loginForm"><label>Tên đăng nhập<input name="username" autocomplete="username" required></label><label>Mật khẩu<div class="password-wrap"><input name="password" type="password" autocomplete="current-password" required><button type="button" id="togglePassword" aria-label="Hiện/Ẩn mật khẩu" class="password-toggle-btn"><svg id="eyeIcon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button></div></label><div class="login-error" id="loginError"></div><button class="admin-btn" type="submit">Đăng nhập</button></form></section></main>`;
+
+  document.getElementById("togglePassword").onclick = function () {
+    const i = document.querySelector("[name=password]");
+    const isPassword = i.type === "password";
+    i.type = isPassword ? "text" : "password";
+
+    // Cập nhật Icon (Mắt mở / Mắt gạch chéo)
+    const svg = document.getElementById("eyeIcon");
+    if (isPassword) {
+      // Icon Mắt gạch chéo (Đang hiện mật khẩu -> Bấm để ẩn)
+      svg.innerHTML = `<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>`;
+    } else {
+      // Icon Mắt thường (Đang ẩn mật khẩu -> Bấm để hiện)
+      svg.innerHTML = `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>`;
+    }
+  };
+
+  document.getElementById("loginForm").onsubmit = async (e) => {
+    e.preventDefault();
+    const f = new FormData(e.target),
+      err = document.getElementById("loginError");
+    err.textContent = "Đang kiểm tra…";
+    if (
+      f.get("username") === config.username &&
+      (await sha(f.get("password"))) === config.passwordHash
+    ) {
+      sessionStorage.setItem(SESSION, "active");
+      location.hash = "#dashboard";
+      render();
+    } else err.textContent = "Tên đăng nhập hoặc mật khẩu không đúng.";
+  };
+}
   function layout() {
     app.innerHTML = `<div class="admin-shell"><aside class="admin-sidebar"><div class="admin-brand"><img src="assets/nhip-bac-images/logo.jpg"><span>Nhíp Bạc<small>ADMIN CONSOLE</small></span></div><nav class="admin-nav"><a href="#dashboard" data-view="dashboard">▦ <span>Tổng quan</span></a><a href="#services" data-view="services">◈ <span>Dịch vụ & giá</span></a><a href="#reviews" data-view="reviews">★ <span>Đánh giá</span></a><a href="#bookings" data-view="bookings">▣ <span>Lịch đặt hẹn</span></a></nav><button class="logout-btn" id="logout">↪ <span>Đăng xuất</span></button></aside><main class="admin-main"><header class="admin-topbar"><h1 id="pageTitle">Tổng quan</h1><span class="admin-user">◉ Admin · phiên hiện tại</span></header><section class="admin-content" id="content"></section></main></div>`;
     document.getElementById("logout").onclick = () => {
