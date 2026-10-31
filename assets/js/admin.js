@@ -1,7 +1,8 @@
 (function () {
   const SESSION = "nhipbac.admin.session.v1",
     HASH = "9a4aabf0e5cf71cae2cea646613ce7e2a5919fa758e56819704be25a3a2c1f0b";
-  const config = { username: "admin", passwordHash: HASH }; // Demo credentials: admin / ChangeMe123!. Change hash here to rotate it.
+  const config = { username: "admin", passwordHash: HASH }; // Local fallback only. Production auth uses /api/admin/auth.
+  const TOKEN = "nhipbac.admin.token.v1";
   const app = document.getElementById("adminApp"),
     esc = (s) =>
       String(s ?? "").replace(
@@ -40,6 +41,25 @@
       .map((x) => x.toString(16).padStart(2, "0"))
       .join("");
   }
+  async function authenticateRemote(username, password) {
+    try {
+      const response = await fetch("/api/admin/auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, password }) });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.token) return data.token;
+    } catch (error) { /* local development can use the fallback credentials */ }
+    return null;
+  }
+  async function hydrateRemoteBookings() {
+    const token = sessionStorage.getItem(TOKEN);
+    if (!token) return false;
+    try {
+      const response = await fetch("/api/admin/bookings", { headers: { Authorization: `Bearer ${token}` } });
+      if (!response.ok) return false;
+      const rows = await response.json();
+      NhipBacStore.bookings.save(rows.map(x => ({ id: x.id, customerName: x.customer_name, phone: x.phone, serviceId: x.service_id || "", serviceNameSnapshot: x.service_name_snapshot, preferredDate: x.preferred_date || "", preferredTime: x.preferred_time || "", message: x.message || "", createdAt: x.created_at, status: x.status, adminNote: x.admin_note || "", updatedAt: x.updated_at })));
+      return true;
+    } catch (error) { return false; }
+  }
   function login() {
   app.innerHTML = `<main class="login-page"><section class="login-card"><div class="admin-brand"><img src="assets/nhip-bac-images/logo.jpg"><span>Nhíp Bạc<small>ADMIN CONSOLE</small></span></div><h1>Đăng nhập quản trị</h1><p class="notice">Tài khoản demo dành cho phát triển nội bộ. Dữ liệu và phiên đăng nhập chỉ tồn tại trên trình duyệt này.</p><form id="loginForm"><label>Tên đăng nhập<input name="username" autocomplete="username" required></label><label>Mật khẩu<div class="password-wrap"><input name="password" type="password" autocomplete="current-password" required><button type="button" id="togglePassword" aria-label="Hiện/Ẩn mật khẩu" class="password-toggle-btn"><svg id="eyeIcon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button></div></label><div class="login-error" id="loginError"></div><button class="admin-btn" type="submit">Đăng nhập</button></form></section></main>`;
 
@@ -64,12 +84,13 @@
     const f = new FormData(e.target),
       err = document.getElementById("loginError");
     err.textContent = "Đang kiểm tra…";
-    if (
-      f.get("username") === config.username &&
-      (await sha(f.get("password"))) === config.passwordHash
-    ) {
+    const remoteToken = await authenticateRemote(f.get("username"), f.get("password"));
+    const localValid = f.get("username") === config.username && (await sha(f.get("password"))) === config.passwordHash;
+    if (remoteToken || localValid) {
       sessionStorage.setItem(SESSION, "active");
+      if (remoteToken) sessionStorage.setItem(TOKEN, remoteToken);
       location.hash = "#dashboard";
+      await hydrateRemoteBookings();
       render();
     } else err.textContent = "Tên đăng nhập hoặc mật khẩu không đúng.";
   };
@@ -78,6 +99,7 @@
     app.innerHTML = `<div class="admin-shell"><aside class="admin-sidebar"><div class="admin-brand"><img src="assets/nhip-bac-images/logo.jpg"><span>Nhíp Bạc<small>ADMIN CONSOLE</small></span></div><nav class="admin-nav"><a href="#dashboard" data-view="dashboard">▦ <span>Tổng quan</span></a><a href="#services" data-view="services">◈ <span>Dịch vụ & giá</span></a><a href="#reviews" data-view="reviews">★ <span>Đánh giá</span></a><a href="#bookings" data-view="bookings">▣ <span>Lịch đặt hẹn</span></a></nav><button class="logout-btn" id="logout">↪ <span>Đăng xuất</span></button></aside><main class="admin-main"><header class="admin-topbar"><h1 id="pageTitle">Tổng quan</h1><span class="admin-user">◉ Admin · phiên hiện tại</span></header><section class="admin-content" id="content"></section></main></div>`;
     document.getElementById("logout").onclick = () => {
       sessionStorage.removeItem(SESSION);
+      sessionStorage.removeItem(TOKEN);
       location.hash = "";
       login();
     };
@@ -284,19 +306,22 @@
     );
     document.querySelectorAll("[data-booking-status]").forEach(
       (b) =>
-        (b.onchange = () => {
+        (b.onchange = async () => {
           const x = NhipBacStore.bookings
             .all()
             .find((x) => x.id === b.dataset.bookingStatus);
           NhipBacStore.bookings.update({ ...x, status: b.value });
+          if (!(await remoteBookingMutation("PATCH", { id: x.id, status: b.value }))) toast("Không thể đồng bộ trạng thái lên database.");
           toast("Đã cập nhật trạng thái");
         }),
     );
     document.querySelectorAll("[data-delete-booking]").forEach(
       (b) =>
-        (b.onclick = () => {
+        (b.onclick = async () => {
           if (confirm("Xóa yêu cầu này?")) {
-            NhipBacStore.bookings.remove(b.dataset.deleteBooking);
+            const id = b.dataset.deleteBooking;
+            if (!(await remoteBookingMutation("DELETE", { id }))) return toast("Không thể xóa booking trên database.");
+            NhipBacStore.bookings.remove(id);
             render("bookings");
           }
         }),
@@ -356,16 +381,32 @@
             "Chi tiết yêu cầu",
             `<div class="notice"><strong>${esc(x.customerName)}</strong><br>${esc(x.phone)} · ${esc(x.serviceNameSnapshot)}<br>Ngày mong muốn: ${esc(x.preferredDate || "—")} ${esc(x.preferredTime || "")}<br>Gửi lúc: ${fmt(x.createdAt)}<br><br>${esc(x.message || "Không có ghi chú khách hàng.")}</div><label class="admin-form">Ghi chú nội bộ<textarea id="adminNote" rows="4">${esc(x.adminNote || "")}</textarea></label><div class="modal-actions"><button class="admin-btn" id="saveBookingNote">Lưu ghi chú</button></div>`,
           );
-          m.el.querySelector("#saveBookingNote").onclick = () => {
+          m.el.querySelector("#saveBookingNote").onclick = async () => {
+            const adminNote = m.el.querySelector("#adminNote").value;
+            if (!(await remoteBookingMutation("PATCH", { id: x.id, adminNote }))) return toast("Không thể lưu ghi chú lên database.");
             NhipBacStore.bookings.update({
               ...x,
-              adminNote: m.el.querySelector("#adminNote").value,
+              adminNote,
             });
             m.close();
             toast("Đã lưu ghi chú");
           };
         }),
     );
+  }
+  function bindRemoteBookingActions() {
+    const token = sessionStorage.getItem(TOKEN);
+    if (!token) return;
+    document.querySelectorAll("[data-booking-status]").forEach(select => select.addEventListener("change", async () => {
+      const response = await fetch("/api/admin/bookings", { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ id: select.dataset.bookingStatus, status: select.value }) });
+      if (!response.ok) toast("Không thể đồng bộ trạng thái lên database.");
+    }));
+  }
+  async function remoteBookingMutation(method, body) {
+    const token = sessionStorage.getItem(TOKEN);
+    if (!token) return true;
+    const response = await fetch("/api/admin/bookings", { method, headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify(body) });
+    return response.ok;
   }
   function render(view) {
     if (!sessionStorage.getItem(SESSION)) return login();
@@ -395,5 +436,5 @@
   window.addEventListener("storage", () => {
     if (sessionStorage.getItem(SESSION)) render();
   });
-  render();
+  (async () => { await hydrateRemoteBookings(); render(); })();
 })();

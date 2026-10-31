@@ -436,6 +436,23 @@ function showBookingSuccess(record) {
   setTimeout(() => overlay.remove(), 12000);
 }
 
+async function saveBooking(record) {
+  try {
+    const response = await fetch("/api/bookings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(record),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.ok) return { ok: true, data };
+    return { ok: false, error: data.error || "Không thể lưu yêu cầu đặt lịch." };
+  } catch (error) {
+    const localPreview = ["localhost", "127.0.0.1"].includes(window.location.hostname) || window.location.protocol === "file:";
+    if (localPreview) return { ok: NhipBacStore.bookings.add(record), local: true };
+    return { ok: false, error: "Không thể kết nối đến máy chủ. Vui lòng thử lại sau." };
+  }
+}
+
 function initPublicData() {
   if (!window.NhipBacStore) return;
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
@@ -449,7 +466,7 @@ function initPublicData() {
   if (reviewRoot) { const reviews=NhipBacStore.reviews.all().filter(r=>r.status==="published"); reviewRoot.innerHTML=reviews.map(r=>`<article class="review-card reveal"><span>${"★".repeat(r.rating)}</span><p>${esc(r.content)}</p><cite>${esc(r.name)}</cite></article>`).join("") || `<p class="empty-state">Chưa có đánh giá được xuất bản.</p>`; }
   const select=document.getElementById("bookingService"); if(select) select.innerHTML=services.map(s=>`<option value="${esc(s.id)}">${esc(s.nameVi)}</option>`).join("");
   const form=document.getElementById("bookingForm");
-  if(form) form.addEventListener("submit", e=>{e.preventDefault();if(form.dataset.submitting==="true")return;const f=new FormData(form), name=String(f.get("name")||"").trim(),phone=String(f.get("phone")||"").trim(),sid=String(f.get("service")||""),service=services.find(s=>s.id===sid),message=document.getElementById("bookingMessage");if(!name||!phone){message.textContent="Vui lòng nhập họ tên và số điện thoại.";message.style.color="#b94a43";return}form.dataset.submitting="true";const record={id:NhipBacStore.id("booking"),customerName:name,phone,serviceId:sid,serviceNameSnapshot:service?.nameVi||"Dịch vụ không xác định",preferredDate:f.get("date")||"",preferredTime:f.get("time")||"",message:f.get("note")||"",createdAt:new Date().toISOString(),status:"new",adminNote:"",updatedAt:new Date().toISOString()};const ok=NhipBacStore.bookings.add(record);message.textContent=ok?"Đã ghi nhận yêu cầu. Nhíp Bạc sẽ liên hệ để xác nhận lịch.":"Không thể lưu yêu cầu trên trình duyệt này.";message.style.color=ok?"#287344":"#b94a43";if(ok){form.reset();showBookingSuccess(record);}setTimeout(()=>form.dataset.submitting="false",700)});
+  if(form) form.addEventListener("submit", async e=>{e.preventDefault();if(form.dataset.submitting==="true")return;const f=new FormData(form), name=String(f.get("name")||"").trim(),phone=String(f.get("phone")||"").trim(),sid=String(f.get("service")||""),service=services.find(s=>s.id===sid),message=document.getElementById("bookingMessage");if(!name||!phone){message.textContent="Vui lòng nhập họ tên và số điện thoại.";message.style.color="#b94a43";return}form.dataset.submitting="true";const record={customerName:name,phone,serviceId:sid,serviceNameSnapshot:service?.nameVi||"Dịch vụ không xác định",preferredDate:f.get("date")||"",preferredTime:f.get("time")||"",message:f.get("note")||""};const result=await saveBooking(record);message.textContent=result.ok?"Đã ghi nhận yêu cầu. Nhíp Bạc sẽ liên hệ để xác nhận lịch.":result.error;message.style.color=result.ok?"#287344":"#b94a43";if(result.ok){form.reset();showBookingSuccess({...record,id:result.data?.booking?.id||NhipBacStore.id("booking")});}setTimeout(()=>form.dataset.submitting="false",700)});
 }
 
 document.addEventListener("DOMContentLoaded", () => {
