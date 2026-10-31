@@ -474,7 +474,6 @@ document.addEventListener("DOMContentLoaded", () => {
   initLanguage();
   initActiveNav();
   initNavigation();
-  initReveal();
   initCarousel();
   initMobileSwipeNavigation();
   initPosterLightbox();
@@ -483,4 +482,5 @@ document.addEventListener("DOMContentLoaded", () => {
   initSocialDockSwipeVertical();
   initBookingCalendar();
   initPublicData();
+  initReveal();
 });
