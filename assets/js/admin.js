@@ -45,9 +45,10 @@
     try {
       const response = await fetch("/api/admin/auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, password }) });
       const data = await response.json().catch(() => ({}));
-      if (response.ok && data.token) return data.token;
+      if (response.ok && data.token) return { token: data.token };
+      return { error: data.error || `Auth API trả về HTTP ${response.status}.` };
     } catch (error) { /* local development can use the fallback credentials */ }
-    return null;
+    return { error: "Không thể kết nối tới Auth API." };
   }
   const isLocalPreview = ["localhost", "127.0.0.1"].includes(window.location.hostname) || window.location.protocol === "file:";
   async function hydrateRemoteBookings() {
@@ -85,10 +86,11 @@
     const f = new FormData(e.target),
       err = document.getElementById("loginError");
     err.textContent = "Đang kiểm tra…";
-    const remoteToken = await authenticateRemote(f.get("username"), f.get("password"));
+    const remoteResult = await authenticateRemote(f.get("username"), f.get("password"));
+    const remoteToken = remoteResult.token;
     const localValid = f.get("username") === config.username && (await sha(f.get("password"))) === config.passwordHash;
     if (!isLocalPreview && !remoteToken) {
-      err.textContent = "Không thể xác thực Admin production. Kiểm tra ADMIN_USERNAME, ADMIN_PASSWORD_HASH và ADMIN_SESSION_SECRET trên Vercel.";
+      err.textContent = remoteResult.error || "Không thể xác thực Admin production.";
       return;
     }
     if (remoteToken || localValid) {
