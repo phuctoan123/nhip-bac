@@ -3,6 +3,7 @@
     HASH = "9a4aabf0e5cf71cae2cea646613ce7e2a5919fa758e56819704be25a3a2c1f0b";
   const config = { username: "admin", passwordHash: HASH }; // Local fallback only. Production auth uses /api/admin/auth.
   const TOKEN = "nhipbac.admin.token.v1";
+  let remoteBookingError = "";
   const app = document.getElementById("adminApp"),
     esc = (s) =>
       String(s ?? "").replace(
@@ -56,11 +57,22 @@
     if (!token) return false;
     try {
       const response = await fetch("/api/admin/bookings", { headers: { Authorization: `Bearer ${token}` } });
-      if (!response.ok) return false;
-      const rows = await response.json();
+      const payload = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        sessionStorage.removeItem(SESSION);
+        sessionStorage.removeItem(TOKEN);
+        remoteBookingError = "Phiên Admin đã hết hạn. Vui lòng đăng nhập lại.";
+        return false;
+      }
+      if (!response.ok) {
+        remoteBookingError = payload.error || `Không thể tải booking từ database (HTTP ${response.status}).`;
+        return false;
+      }
+      const rows = Array.isArray(payload) ? payload : [];
+      remoteBookingError = "";
       NhipBacStore.bookings.save(rows.map(x => ({ id: x.id, bookingCode: x.booking_code || "", customerName: x.customer_name, phone: x.phone, serviceId: x.service_id || "", serviceNameSnapshot: x.service_name_snapshot, preferredDate: x.preferred_date || "", preferredTime: x.preferred_time || "", message: x.message || "", createdAt: x.created_at, status: x.status, adminNote: x.admin_note || "", updatedAt: x.updated_at })));
       return true;
-    } catch (error) { return false; }
+    } catch (error) { remoteBookingError = "Không thể kết nối tới API booking của Vercel."; return false; }
   }
   function login() {
   app.innerHTML = `<main class="login-page"><section class="login-card"><div class="admin-brand"><img src="assets/nhip-bac-images/logo.jpg"><span>Nhíp Bạc<small>ADMIN CONSOLE</small></span></div><h1>Đăng nhập quản trị</h1><p class="notice">Tài khoản demo dành cho phát triển nội bộ. Dữ liệu và phiên đăng nhập chỉ tồn tại trên trình duyệt này.</p><form id="loginForm"><label>Tên đăng nhập<input name="username" autocomplete="username" required></label><label>Mật khẩu<div class="password-wrap"><input name="password" type="password" autocomplete="current-password" required><button type="button" id="togglePassword" aria-label="Hiện/Ẩn mật khẩu" class="password-toggle-btn"><svg id="eyeIcon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button></div></label><div class="login-error" id="loginError"></div><button class="admin-btn" type="submit">Đăng nhập</button></form></section></main>`;
@@ -228,7 +240,7 @@
     let a = NhipBacStore.bookings
       .all()
       .sort((x, y) => new Date(y.createdAt) - new Date(x.createdAt));
-    return `<div class="admin-toolbar"><div><h2>Lịch đặt hẹn</h2><p>Local demo: dữ liệu chỉ có trên trình duyệt/origin hiện tại.</p></div><button class="admin-btn secondary" id="exportBookings">Xuất CSV</button></div><div class="panel"><table class="data-table"><thead><tr><th>Mã</th><th>Khách hàng</th><th>Dịch vụ</th><th>Ngày mong muốn</th><th>Ngày gửi</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>${
+    return `<div class="admin-toolbar"><div><h2>Lịch đặt hẹn</h2><p>${remoteBookingError ? `<strong style="color:#b23a2f">${esc(remoteBookingError)}</strong>` : "Dữ liệu booking được tải từ Supabase thông qua Vercel API."}</p></div><button class="admin-btn secondary" id="exportBookings">Xuất CSV</button></div><div class="panel"><table class="data-table"><thead><tr><th>Mã</th><th>Khách hàng</th><th>Dịch vụ</th><th>Ngày mong muốn</th><th>Ngày gửi</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>${
       a.length
         ? a
             .map(
