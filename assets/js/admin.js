@@ -58,7 +58,7 @@
       const response = await fetch("/api/admin/bookings", { headers: { Authorization: `Bearer ${token}` } });
       if (!response.ok) return false;
       const rows = await response.json();
-      NhipBacStore.bookings.save(rows.map(x => ({ id: x.id, customerName: x.customer_name, phone: x.phone, serviceId: x.service_id || "", serviceNameSnapshot: x.service_name_snapshot, preferredDate: x.preferred_date || "", preferredTime: x.preferred_time || "", message: x.message || "", createdAt: x.created_at, status: x.status, adminNote: x.admin_note || "", updatedAt: x.updated_at })));
+      NhipBacStore.bookings.save(rows.map(x => ({ id: x.id, bookingCode: x.booking_code || "", customerName: x.customer_name, phone: x.phone, serviceId: x.service_id || "", serviceNameSnapshot: x.service_name_snapshot, preferredDate: x.preferred_date || "", preferredTime: x.preferred_time || "", message: x.message || "", createdAt: x.created_at, status: x.status, adminNote: x.admin_note || "", updatedAt: x.updated_at })));
       return true;
     } catch (error) { return false; }
   }
@@ -233,7 +233,7 @@
         ? a
             .map(
               (x) =>
-                `<tr><td>${esc(x.id)}</td><td><strong>${esc(x.customerName)}</strong><br>${esc(x.phone)}</td><td>${esc(x.serviceNameSnapshot)}</td><td>${esc(x.preferredDate || "—")} ${esc(x.preferredTime || "")}</td><td>${fmt(x.createdAt)}</td><td><select class="booking-status" data-booking-status="${x.id}">${[
+                `<tr><td><strong>${esc(x.bookingCode || x.id)}</strong></td><td><strong>${esc(x.customerName)}</strong><br>${esc(x.phone)}</td><td>${esc(x.serviceNameSnapshot)}</td><td>${esc(x.preferredDate || "—")} ${esc(x.preferredTime || "")}</td><td>${fmt(x.createdAt)}</td><td><select class="booking-status" data-booking-status="${x.id}">${[
                   ["new", "Mới"],
                   ["processing", "Đang xử lý"],
                   ["confirmed", "Đã xác nhận"],
@@ -351,6 +351,7 @@
   function exportCsv() {
     const rows = NhipBacStore.bookings.all(),
       head = [
+        "bookingCode",
         "id",
         "customerName",
         "phone",
@@ -364,7 +365,7 @@
     const csv = [
         head,
         ...rows.map((x) =>
-          head.map((k) => String(x[k] ?? "").replace(/"/g, '""')),
+            head.map((k) => String(x[k] ?? "").replace(/"/g, '""')),
         ),
       ]
         .map((r) => r.map((x) => `"${x}"`).join(","))
@@ -386,7 +387,7 @@
           if (!x) return;
           const m = modal(
             "Chi tiết yêu cầu",
-            `<div class="notice"><strong>${esc(x.customerName)}</strong><br>${esc(x.phone)} · ${esc(x.serviceNameSnapshot)}<br>Ngày mong muốn: ${esc(x.preferredDate || "—")} ${esc(x.preferredTime || "")}<br>Gửi lúc: ${fmt(x.createdAt)}<br><br>${esc(x.message || "Không có ghi chú khách hàng.")}</div><label class="admin-form">Ghi chú nội bộ<textarea id="adminNote" rows="4">${esc(x.adminNote || "")}</textarea></label><div class="modal-actions"><button class="admin-btn" id="saveBookingNote">Lưu ghi chú</button></div>`,
+            `<div class="notice"><strong>Mã: ${esc(x.bookingCode || x.id)}</strong><br>${esc(x.customerName)} · ${esc(x.phone)}<br>${esc(x.serviceNameSnapshot)}<br>Ngày mong muốn: ${esc(x.preferredDate || "—")} ${esc(x.preferredTime || "")}<br>Gửi lúc: ${fmt(x.createdAt)}<br><br>${esc(x.message || "Không có ghi chú khách hàng.")}</div><label class="admin-form">Ghi chú nội bộ<textarea id="adminNote" rows="4">${esc(x.adminNote || "")}</textarea></label><div class="modal-actions"><button class="admin-btn" id="saveBookingNote">Lưu ghi chú</button></div>`,
           );
           m.el.querySelector("#saveBookingNote").onclick = async () => {
             const adminNote = m.el.querySelector("#adminNote").value;

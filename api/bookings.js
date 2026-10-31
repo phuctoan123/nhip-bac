@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const { supabaseRequest } = require("./_lib/supabase");
 
 function json(res, status, data) {
@@ -6,6 +7,13 @@ function json(res, status, data) {
 }
 
 const clean = (value, max = 500) => String(value || "").trim().slice(0, max);
+const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+function createBookingCode() {
+  let suffix = "";
+  for (let i = 0; i < 4; i += 1) suffix += CODE_ALPHABET[crypto.randomInt(CODE_ALPHABET.length)];
+  return `NB-${suffix}`;
+}
 
 function validDate(value) {
   if (!value) return true;
@@ -42,20 +50,25 @@ module.exports = async function handler(req, res) {
     if (!/^[0-9+().\-\s]{8,25}$/.test(phone)) return json(res, 400, { error: "Số điện thoại không hợp lệ." });
     if (!validDate(preferredDate)) return json(res, 400, { error: "Ngày đặt lịch không hợp lệ." });
 
-    const result = await supabaseRequest("bookings", {
-      method: "POST",
-      headers: { Prefer: "return=representation" },
-      body: JSON.stringify({
-        customer_name: customerName,
-        phone,
-        service_id: serviceId || null,
-        service_name_snapshot: serviceNameSnapshot,
-        preferred_date: preferredDate || null,
-        preferred_time: preferredTime || null,
-        message: message || null,
-        status: "new",
-      }),
-    });
+    let result;
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      result = await supabaseRequest("bookings", {
+        method: "POST",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({
+          booking_code: createBookingCode(),
+          customer_name: customerName,
+          phone,
+          service_id: serviceId || null,
+          service_name_snapshot: serviceNameSnapshot,
+          preferred_date: preferredDate || null,
+          preferred_time: preferredTime || null,
+          message: message || null,
+          status: "new",
+        }),
+      });
+      if (result.response.ok || result.response.status !== 409) break;
+    }
 
     if (!result.response.ok) {
       console.error("Supabase booking error", result.data);
@@ -63,7 +76,7 @@ module.exports = async function handler(req, res) {
     }
 
     const booking = result.data?.[0];
-    return json(res, 201, { success: true, booking: { id: booking.id, status: booking.status, createdAt: booking.created_at } });
+    return json(res, 201, { success: true, booking: { id: booking.id, bookingCode: booking.booking_code, status: booking.status, createdAt: booking.created_at } });
   } catch (error) {
     console.error("Booking API error", error);
     return json(res, 502, { error: "Không thể kết nối tới database." });
