@@ -24,6 +24,11 @@ module.exports = async function handler(req, res) {
   if (req.method !== "POST") return json(res, 405, { error: "Method not allowed" });
 
   try {
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SECRET_KEY) {
+      console.error("Missing SUPABASE_URL or SUPABASE_SECRET_KEY in the active Vercel deployment");
+      return json(res, 500, { error: "Server chưa nhận được biến môi trường database." });
+    }
+
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
     const customerName = clean(body.customerName, 120);
     const phone = clean(body.phone, 30);
@@ -61,6 +66,6 @@ module.exports = async function handler(req, res) {
     return json(res, 201, { success: true, booking: { id: booking.id, status: booking.status, createdAt: booking.created_at } });
   } catch (error) {
     console.error("Booking API error", error);
-    return json(res, 500, { error: "Server chưa được cấu hình database." });
+    return json(res, 502, { error: "Không thể kết nối tới database." });
   }
 };

@@ -49,6 +49,7 @@
     } catch (error) { /* local development can use the fallback credentials */ }
     return null;
   }
+  const isLocalPreview = ["localhost", "127.0.0.1"].includes(window.location.hostname) || window.location.protocol === "file:";
   async function hydrateRemoteBookings() {
     const token = sessionStorage.getItem(TOKEN);
     if (!token) return false;
@@ -86,6 +87,10 @@
     err.textContent = "Đang kiểm tra…";
     const remoteToken = await authenticateRemote(f.get("username"), f.get("password"));
     const localValid = f.get("username") === config.username && (await sha(f.get("password"))) === config.passwordHash;
+    if (!isLocalPreview && !remoteToken) {
+      err.textContent = "Không thể xác thực Admin production. Kiểm tra ADMIN_USERNAME, ADMIN_PASSWORD_HASH và ADMIN_SESSION_SECRET trên Vercel.";
+      return;
+    }
     if (remoteToken || localValid) {
       sessionStorage.setItem(SESSION, "active");
       if (remoteToken) sessionStorage.setItem(TOKEN, remoteToken);
@@ -410,6 +415,7 @@
   }
   function render(view) {
     if (!sessionStorage.getItem(SESSION)) return login();
+    if (!isLocalPreview && !sessionStorage.getItem(TOKEN)) return login();
     layout();
     view = view || location.hash.slice(1) || "dashboard";
     if (!["dashboard", "services", "reviews", "bookings"].includes(view))
