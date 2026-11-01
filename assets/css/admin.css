@@ -532,3 +532,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 @media (max-width: 420px) { .admin-topbar h1 { font-size: 20px; } .stat-card small { font-size: 10px; } .stat-card strong { font-size: 23px; } .login-page { padding: 14px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
+
+.admin-header-actions { display: flex; align-items: center; gap: 8px; }
+.admin-alert-btn { min-height: 32px; padding: 6px 9px; border: 1px solid var(--admin-line-dark); border-radius: var(--admin-radius); background: transparent; color: var(--admin-ink); font-size: 10px; font-weight: 700; cursor: pointer; }
+.admin-alert-btn:hover { border-color: var(--admin-gold); background: #f1e8d9; }
+@media (max-width: 760px) { .admin-header-actions { gap: 4px; } .admin-alert-btn { width: 32px; overflow: hidden; padding: 6px 4px; white-space: nowrap; font-size: 0; } .admin-alert-btn::before { font-size: 15px; } #enableNotifications::before { content: "🔔"; } #enableSound::before { content: "🔊"; } }

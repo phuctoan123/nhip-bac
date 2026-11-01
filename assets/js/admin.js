@@ -74,6 +74,54 @@
       return true;
     } catch (error) { remoteBookingError = "Không thể kết nối tới API booking của Vercel."; return false; }
   }
+  let bookingPollTimer = null;
+  let bookingSnapshotReady = false;
+  let knownBookingIds = new Set();
+  function playNewBookingSound(force = false) {
+    if (!force && sessionStorage.getItem("nhipbac.admin.sound.v1") !== "enabled") return;
+    const audio = new Audio("assets/audio/new-booking.mp3");
+    audio.volume = 0.65;
+    audio.play().catch(() => {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      const context = new AudioContext();
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(880, context.currentTime);
+      oscillator.frequency.setValueAtTime(1174.66, context.currentTime + 0.14);
+      gain.gain.setValueAtTime(0.0001, context.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.2, context.currentTime + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.45);
+      oscillator.connect(gain).connect(context.destination);
+      oscillator.start();
+      oscillator.stop(context.currentTime + 0.48);
+    });
+  }
+  function notifyNewBookings(items) {
+    if (!items.length) return;
+    const first = items[0];
+    toast(`Có ${items.length} lịch đặt mới · ${first.bookingCode || first.id}`);
+    playNewBookingSound();
+    if ("Notification" in window && Notification.permission === "granted") {
+      const notification = new Notification("Nhíp Bạc có lịch đặt mới", { body: `${first.bookingCode || first.id} · ${first.customerName} · ${first.serviceNameSnapshot}`, icon: "assets/nhip-bac-images/logo.jpg", tag: "nhipbac-new-booking" });
+      notification.onclick = () => { window.focus(); location.hash = "#bookings"; notification.close(); };
+    }
+  }
+  function startBookingPolling() {
+    if (bookingPollTimer) clearInterval(bookingPollTimer);
+    knownBookingIds = new Set(NhipBacStore.bookings.all().map(item => item.id));
+    bookingSnapshotReady = true;
+    bookingPollTimer = setInterval(async () => {
+      const loaded = await hydrateRemoteBookings();
+      if (!loaded) return;
+      const current = NhipBacStore.bookings.all();
+      const fresh = current.filter(item => !knownBookingIds.has(item.id) && item.status === "new");
+      knownBookingIds = new Set(current.map(item => item.id));
+      if (bookingSnapshotReady && fresh.length) { notifyNewBookings(fresh); render(location.hash.slice(1) || "dashboard"); }
+      bookingSnapshotReady = true;
+    }, 15000);
+  }
   function login() {
   app.innerHTML = `<main class="login-page"><section class="login-card"><div class="admin-brand"><img src="assets/nhip-bac-images/logo.jpg"><span>Nhíp Bạc<small>ADMIN CONSOLE</small></span></div><h1>Đăng nhập quản trị</h1><p class="notice">Tài khoản demo dành cho phát triển nội bộ. Dữ liệu và phiên đăng nhập chỉ tồn tại trên trình duyệt này.</p><form id="loginForm"><label>Tên đăng nhập<input name="username" autocomplete="username" required></label><label>Mật khẩu<div class="password-wrap"><input name="password" type="password" autocomplete="current-password" required><button type="button" id="togglePassword" aria-label="Hiện/Ẩn mật khẩu" class="password-toggle-btn"><svg id="eyeIcon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button></div></label><div class="login-error" id="loginError"></div><button class="admin-btn" type="submit">Đăng nhập</button></form></section></main>`;
 
@@ -110,13 +158,15 @@
       if (remoteToken) sessionStorage.setItem(TOKEN, remoteToken);
       location.hash = "#dashboard";
       await hydrateRemoteBookings();
+      startBookingPolling();
       render();
     } else err.textContent = "Tên đăng nhập hoặc mật khẩu không đúng.";
   };
 }
   function layout() {
-    app.innerHTML = `<div class="admin-shell"><aside class="admin-sidebar"><div class="admin-brand"><img src="assets/nhip-bac-images/logo.jpg"><span>Nhíp Bạc<small>ADMIN CONSOLE</small></span></div><nav class="admin-nav"><a href="#dashboard" data-view="dashboard">▦ <span>Tổng quan</span></a><a href="#services" data-view="services">◈ <span>Dịch vụ & giá</span></a><a href="#reviews" data-view="reviews">★ <span>Đánh giá</span></a><a href="#bookings" data-view="bookings">▣ <span>Lịch đặt hẹn</span></a></nav><button class="logout-btn" id="logout">↪ <span>Đăng xuất</span></button></aside><main class="admin-main"><header class="admin-topbar"><h1 id="pageTitle">Tổng quan</h1><span class="admin-user">◉ Admin · phiên hiện tại</span></header><section class="admin-content" id="content"></section></main></div>`;
+    app.innerHTML = `<div class="admin-shell"><aside class="admin-sidebar"><div class="admin-brand"><img src="assets/nhip-bac-images/logo.jpg"><span>Nhíp Bạc<small>ADMIN CONSOLE</small></span></div><nav class="admin-nav"><a href="#dashboard" data-view="dashboard">▦ <span>Tổng quan</span></a><a href="#services" data-view="services">◈ <span>Dịch vụ & giá</span></a><a href="#reviews" data-view="reviews">★ <span>Đánh giá</span></a><a href="#bookings" data-view="bookings">▣ <span>Lịch đặt hẹn</span></a></nav><button class="logout-btn" id="logout">↪ <span>Đăng xuất</span></button></aside><main class="admin-main"><header class="admin-topbar"><h1 id="pageTitle">Tổng quan</h1><div class="admin-header-actions"><button type="button" class="admin-alert-btn" id="enableNotifications">Bật thông báo</button><button type="button" class="admin-alert-btn" id="enableSound">Bật âm thanh</button><span class="admin-user">◉ Admin · phiên hiện tại</span></div></header><section class="admin-content" id="content"></section></main></div>`;
     document.getElementById("logout").onclick = () => {
+      if (bookingPollTimer) { clearInterval(bookingPollTimer); bookingPollTimer = null; }
       sessionStorage.removeItem(SESSION);
       sessionStorage.removeItem(TOKEN);
       location.hash = "";
@@ -125,6 +175,18 @@
     document
       .querySelectorAll("[data-view]")
       .forEach((a) => (a.onclick = () => render(a.dataset.view)));
+    document.getElementById("enableNotifications").onclick = async () => {
+      if (!("Notification" in window)) return toast("Trình duyệt không hỗ trợ thông báo.");
+      const permission = await Notification.requestPermission();
+      toast(permission === "granted" ? "Đã bật thông báo booking." : "Thông báo chưa được cấp quyền.");
+      document.getElementById("enableNotifications").textContent = permission === "granted" ? "Đã bật thông báo" : "Bật thông báo";
+    };
+    document.getElementById("enableSound").onclick = () => {
+      sessionStorage.setItem("nhipbac.admin.sound.v1", "enabled");
+      document.getElementById("enableSound").textContent = "Đã bật âm thanh";
+      playNewBookingSound(true);
+      toast("Đã bật âm thanh nhắc booking.");
+    };
   }
   function modal(title, body, submit) {
     const b = document.createElement("div");
@@ -457,5 +519,5 @@
   window.addEventListener("storage", () => {
     if (sessionStorage.getItem(SESSION)) render();
   });
-  (async () => { await hydrateRemoteBookings(); render(); })();
+  (async () => { await hydrateRemoteBookings(); startBookingPolling(); render(); })();
 })();
