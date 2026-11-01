@@ -364,65 +364,10 @@ function initSocialDockSwipeVertical() {
   const dock = document.getElementById('socialDock');
   if (!dock) return;
 
-  const STORAGE_KEY = "social-dock-hidden";
-  let isHidden = localStorage.getItem(STORAGE_KEY) === "true";
-
-  let touchStartY = 0;
-  let touchStartX = 0;
-  let isDragging = false;
-
-  function showDock() {
-    dock.classList.remove('hidden');
-    dock.classList.add('show');
-    localStorage.setItem(STORAGE_KEY, "false");
-  }
-
-  function hideDock() {
-    dock.classList.add('hidden');
-    localStorage.setItem(STORAGE_KEY, "true");
-  }
-
-  // Touch events
-  dock.addEventListener('touchstart', (e) => {
-    touchStartY = e.changedTouches[0].screenY;
-    touchStartX = e.changedTouches[0].screenX;
-    isDragging = false;
-  }, { passive: true });
-
-  dock.addEventListener('touchmove', (e) => {
-    if (e.changedTouches.length === 0) return;
-    const currentY = e.changedTouches[0].screenY;
-    const currentX = e.changedTouches[0].screenX;
-    const deltaY = currentY - touchStartY;
-    const deltaX = currentX - touchStartX;
-    if (Math.abs(deltaY) > 12 || Math.abs(deltaX) > 12) isDragging = true;
-  }, { passive: true });
-
-  dock.addEventListener('touchend', (e) => {
-    const touchEndY = e.changedTouches[0].screenY;
-    const deltaY = touchEndY - touchStartY;
-
-    // Chỉ xử lý swipe đủ xa; tap ngắn vẫn để trình duyệt phát sinh click.
-    if (isDragging && deltaY > 100) {
-      hideDock();
-    } else if (isDragging && deltaY < -90 && dock.classList.contains('hidden')) {
-      showDock();
-    }
-    isDragging = false;
-  }, { passive: true });
-
-  dock.addEventListener('touchcancel', () => {
-    isDragging = false;
-  }, { passive: true });
-
-  // Khởi tạo
-  if (isHidden) {
-    dock.classList.add('hidden');
-  } else {
-    setTimeout(() => {
-      dock.classList.add('show');
-    }, 700);
-  }
+  // Không để trạng thái ẩn cũ làm mất dock hoặc chặn thao tác trên mobile.
+  localStorage.removeItem("social-dock-hidden");
+  dock.classList.remove('hidden');
+  dock.classList.add('show');
 }
 
 function initBookingCalendar() {
