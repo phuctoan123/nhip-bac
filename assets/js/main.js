@@ -64,32 +64,72 @@ function initActiveNav() {
   });
 }
 
-const DEFAULT_CONTACT_PHONE = "0934013486";
+const DEFAULT_CONTACT_PHONES = [
+  { id: "dung", label: "Ms. Dung", number: "0934013486" },
+  { id: "chau", label: "Ms. Châu", number: "0356735783" },
+];
 
 function normalizeContactPhone(value) {
   const phone = String(value || "").trim().replace(/[^0-9+().\-\s]/g, "");
-  return /^[0-9+().\-\s]{8,25}$/.test(phone) ? phone : DEFAULT_CONTACT_PHONE;
+  return /^[0-9+().\-\s]{8,25}$/.test(phone) ? phone : "";
 }
 
-function applyContactPhone(value) {
-  const phone = normalizeContactPhone(value);
-  const dialable = phone.replace(/(?!^\+)\D/g, "");
+function normalizeContactPhones(value) {
+  const source = Array.isArray(value) ? value : [];
+  return DEFAULT_CONTACT_PHONES.map((fallback, index) => {
+    const item = source.find((candidate) => candidate?.id === fallback.id) || source[index] || {};
+    return {
+      ...fallback,
+      label: String(item.label || fallback.label).trim().slice(0, 60) || fallback.label,
+      number: normalizeContactPhone(item.number) || fallback.number,
+    };
+  });
+}
+
+function applyContactPhones(value) {
+  const phones = normalizeContactPhones(value);
   document.querySelectorAll("[data-contact-phone]").forEach((link) => {
+    const contact = phones.find((item) => item.id === link.dataset.contactPhone) || phones[0];
+    const dialable = contact.number.replace(/(?!^\+)\D/g, "");
     link.href = `tel:${dialable}`;
-    link.setAttribute("aria-label", `Gọi Nhíp Bạc ${phone}`);
+    link.setAttribute("aria-label", `Gọi ${contact.label} ${contact.number}`);
+    const text = link.querySelector(".dock-phone-text");
+    if (text) text.textContent = `${contact.label} : ${contact.number}`;
   });
 }
 
 async function initContactPhone() {
-  applyContactPhone(DEFAULT_CONTACT_PHONE);
+  applyContactPhones(DEFAULT_CONTACT_PHONES);
   try {
-    const response = await fetch("/api/settings?key=contact_phone", { cache: "no-store" });
+    const response = await fetch("/api/settings?key=contact_phones", { cache: "no-store" });
     if (!response.ok) return;
     const data = await response.json();
-    applyContactPhone(data.value?.phone || data.phone);
+    applyContactPhones(data.value?.phones || data.phones);
   } catch {
     // Local static previews use the default number until the API is available.
   }
+}
+
+function initPhoneDock() {
+  document.querySelectorAll("[data-phone-dock]").forEach((group) => {
+    const trigger = group.querySelector(".dock-phone");
+    if (!trigger) return;
+    const setOpen = (open) => {
+      group.classList.toggle("is-open", open);
+      trigger.setAttribute("aria-expanded", String(open));
+    };
+    trigger.addEventListener("click", () => setOpen(!group.classList.contains("is-open")));
+    group.addEventListener("focusin", () => trigger.setAttribute("aria-expanded", "true"));
+    group.addEventListener("focusout", (event) => {
+      if (!group.contains(event.relatedTarget)) setOpen(false);
+    });
+    document.addEventListener("click", (event) => {
+      if (!group.contains(event.target)) setOpen(false);
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") setOpen(false);
+    });
+  });
 }
 
 function initNavigation() {
@@ -457,7 +497,7 @@ function showBookingSuccess(record) {
   document.querySelector(".booking-success-overlay")?.remove();
   const overlay = document.createElement("div");
   overlay.className = "booking-success-overlay";
-  overlay.innerHTML = `<div class="booking-success-card" role="dialog" aria-modal="true" aria-labelledby="bookingSuccessTitle"><div class="success-spark success-spark-one"></div><div class="success-spark success-spark-two"></div><div class="success-check">✓</div><p class="eyebrow">Nhíp Bạc · Booking received</p><h2 id="bookingSuccessTitle">Đặt lịch thành công!</h2><p>Cảm ơn <strong>${String(record.customerName).replace(/[&<>"']/g, "")}</strong>. Yêu cầu của bạn đã được ghi nhận.</p><div class="success-summary"><span>Mã yêu cầu</span><strong>${record.bookingCode || record.id}</strong></div><button type="button" class="btn btn-primary" data-close-success>Đã hiểu</button></div>`;
+  overlay.innerHTML = `<div class="booking-success-card" role="dialog" aria-modal="true" aria-labelledby="bookingSuccessTitle"><div class="success-spark success-spark-one"></div><div class="success-spark success-spark-two"></div><div class="success-check">✓</div><p class="eyebrow">Nhíp Bạc - Booking received</p><h2 id="bookingSuccessTitle">Đặt lịch thành công!</h2><p>Cảm ơn <strong>${String(record.customerName).replace(/[&<>"']/g, "")}</strong>. Yêu cầu của bạn đã được ghi nhận.</p><div class="success-summary"><span>Mã yêu cầu</span><strong>${record.bookingCode || record.id}</strong></div><button type="button" class="btn btn-primary" data-close-success>Đã hiểu</button></div>`;
   document.body.appendChild(overlay);
   playBookingSuccessSound();
   overlay.querySelector("[data-close-success]").addEventListener("click", () => overlay.remove());
@@ -538,6 +578,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initMagnifier();
   initSocialDockAnimation();
   initSocialDockSwipeVertical();
+  initPhoneDock();
   initBookingCalendar();
   initPublicData();
   initReveal();

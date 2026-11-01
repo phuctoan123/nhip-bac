@@ -74,10 +74,13 @@
   
     <!-- Icon floating dock -->
     <div class="social-floating-dock" id="socialDock">
-      <a class="dock-item dock-phone" href="tel:0934013486" data-contact-phone aria-label="Gọi Nhíp Bạc 0934013486">
-        <i class="fa-solid fa-phone" aria-hidden="true"></i>
-        <span class="dock-label">Gọi điện</span>
-      </a>
+      <div class="dock-phone-group" data-phone-dock>
+        <div class="dock-phone-options" aria-label="Chọn số điện thoại">
+          <a class="dock-phone-option" href="tel:0934013486" data-contact-phone="dung" aria-label="Gọi Ms. Dung 0934 013 486"><i class="fa-solid fa-phone" aria-hidden="true"></i><span class="dock-phone-text">Ms. Dung · 0934 013 486</span></a>
+          <a class="dock-phone-option" href="tel:0356735783" data-contact-phone="chau" aria-label="Gọi Ms. Châu 0356 735 783"><i class="fa-solid fa-phone" aria-hidden="true"></i><span class="dock-phone-text">Ms. Châu · 0356 735 783</span></a>
+        </div>
+        <button type="button" class="dock-item dock-phone" aria-label="Mở lựa chọn số điện thoại" aria-expanded="false" aria-haspopup="true"><i class="fa-solid fa-phone" aria-hidden="true"></i><span class="dock-label">Gọi điện</span></button>
+      </div>
       <a class="dock-item"
           href="https://zalo.me/0934013486"
           target="_blank"

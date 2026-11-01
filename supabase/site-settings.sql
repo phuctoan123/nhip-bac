@@ -10,3 +10,10 @@ alter table public.site_settings enable row level security;
 insert into public.site_settings (key, value)
 values ('contact_phone', '{"phone":"0934013486"}'::jsonb)
 on conflict (key) do nothing;
+
+insert into public.site_settings (key, value)
+values (
+  'contact_phones',
+  '{"phones":[{"id":"dung","label":"Ms. Dung","number":"0934013486"},{"id":"chau","label":"Ms. Châu","number":"0356735783"}]}'::jsonb
+)
+on conflict (key) do nothing;

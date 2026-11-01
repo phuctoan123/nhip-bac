@@ -4,7 +4,10 @@
   const config = { username: "admin", passwordHash: HASH }; // Local fallback only. Production auth uses /api/admin/auth.
   const TOKEN = "nhipbac.admin.token.v1";
   let remoteBookingError = "";
-  let contactPhone = "0934013486";
+  let contactPhones = [
+    { id: "dung", label: "Ms. Dung", number: "0934013486" },
+    { id: "chau", label: "Ms. Châu", number: "0356735783" },
+  ];
   const app = document.getElementById("adminApp"),
     esc = (s) =>
       String(s ?? "").replace(
@@ -79,6 +82,17 @@
     const phone = String(value || "").trim().replace(/[^0-9+().\-\s]/g, "");
     return /^[0-9+().\-\s]{8,25}$/.test(phone) ? phone : "";
   }
+  function normalizeContactPhones(value) {
+    const source = Array.isArray(value) ? value : [];
+    return contactPhones.map((fallback, index) => {
+      const item = source.find((candidate) => candidate?.id === fallback.id) || source[index] || {};
+      return {
+        ...fallback,
+        label: String(item.label || fallback.label).trim().slice(0, 60) || fallback.label,
+        number: normalizeContactPhone(item.number) || fallback.number,
+      };
+    });
+  }
   async function hydrateRemoteSettings() {
     const token = sessionStorage.getItem(TOKEN);
     if (!token) return;
@@ -86,7 +100,7 @@
       const response = await fetch("/api/admin/settings", { headers: { Authorization: `Bearer ${token}` } });
       if (!response.ok) return;
       const data = await response.json();
-      contactPhone = normalizeContactPhone(data.value?.phone || data.phone) || contactPhone;
+      contactPhones = normalizeContactPhones(data.value?.phones || data.phones);
     } catch {
       // Keep the current fallback when the settings endpoint is unavailable.
     }
@@ -319,16 +333,20 @@
     };
   }
   function contactSettingsForm() {
-    return `<form class="admin-form" id="contactSettingsForm"><label class="full">Số điện thoại gọi nhanh<input name="phone" type="tel" inputmode="tel" autocomplete="tel" value="${esc(contactPhone)}" required><small class="form-help">Số này sẽ được dùng cho biểu tượng điện thoại trên toàn bộ website.</small></label><div class="modal-actions full"><button type="button" class="admin-btn secondary" data-cancel>Hủy</button><button class="admin-btn">Lưu số điện thoại</button></div></form>`;
+    return `<form class="admin-form" id="contactSettingsForm"><label>Người phụ trách 1<input name="label1" value="${esc(contactPhones[0].label)}" required></label><label>Số điện thoại 1<input name="phone1" type="tel" inputmode="tel" autocomplete="tel" value="${esc(contactPhones[0].number)}" required></label><label>Người phụ trách 2<input name="label2" value="${esc(contactPhones[1].label)}" required></label><label>Số điện thoại 2<input name="phone2" type="tel" inputmode="tel" autocomplete="tel" value="${esc(contactPhones[1].number)}" required></label><p class="form-help full">Trên desktop, hai số sẽ hiện khi rê chuột vào biểu tượng. Trên mobile, người dùng sẽ chọn một trong hai số trước khi gọi.</p><div class="modal-actions full"><button type="button" class="admin-btn secondary" data-cancel>Hủy</button><button class="admin-btn">Lưu số điện thoại</button></div></form>`;
   }
   function openContactSettings() {
     const m = modal("Số điện thoại liên hệ", contactSettingsForm());
     m.el.querySelector("[data-cancel]").onclick = m.close;
     m.el.querySelector("form").onsubmit = async (event) => {
       event.preventDefault();
-      const phone = normalizeContactPhone(new FormData(event.target).get("phone"));
-      if (!phone) {
-        toast("Vui lòng nhập số điện thoại hợp lệ.");
+      const formData = new FormData(event.target);
+      const phones = [
+        { id: "dung", label: String(formData.get("label1") || "").trim(), number: normalizeContactPhone(formData.get("phone1")) },
+        { id: "chau", label: String(formData.get("label2") || "").trim(), number: normalizeContactPhone(formData.get("phone2")) },
+      ];
+      if (phones.some((item) => !item.label || !item.number)) {
+        toast("Vui lòng nhập đủ tên và số điện thoại hợp lệ.");
         return;
       }
       const token = sessionStorage.getItem(TOKEN);
@@ -342,7 +360,7 @@
         response = await fetch("/api/admin/settings", {
           method: "PATCH",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ phone }),
+          body: JSON.stringify({ phones }),
         });
         data = await response.json().catch(() => ({}));
       } catch {
@@ -353,7 +371,7 @@
         toast(data.error || "Không thể lưu số điện thoại.");
         return;
       }
-      contactPhone = normalizeContactPhone(data.value?.phone || phone) || phone;
+      contactPhones = normalizeContactPhones(data.value?.phones || phones);
       m.close();
       toast("Đã cập nhật số điện thoại gọi nhanh.");
     };
