@@ -27,6 +27,8 @@
       this.onPointerMove = this.onPointerMove.bind(this);
       this.onPointerUp = this.onPointerUp.bind(this);
       this.onPointerCancel = this.onPointerCancel.bind(this);
+      this.onTouchMove = this.onTouchMove.bind(this);
+      this.onTouchEnd = this.onTouchEnd.bind(this);
       this.onVisibilityChange = this.onVisibilityChange.bind(this);
       this.onWindowBlur = this.onWindowBlur.bind(this);
       this.onViewportChange = this.onViewportChange.bind(this);
@@ -42,6 +44,9 @@
       document.addEventListener("pointermove", this.onPointerMove, { capture: true, passive: false });
       document.addEventListener("pointerup", this.onPointerUp, { capture: true, passive: true });
       document.addEventListener("pointercancel", this.onPointerCancel, { capture: true, passive: true });
+      document.addEventListener("touchmove", this.onTouchMove, { capture: true, passive: false });
+      document.addEventListener("touchend", this.onTouchEnd, { capture: true, passive: true });
+      document.addEventListener("touchcancel", this.onTouchEnd, { capture: true, passive: true });
       document.addEventListener("visibilitychange", this.onVisibilityChange);
       window.addEventListener("blur", this.onWindowBlur);
       window.addEventListener("scroll", this.onViewportChange, { passive: true });
@@ -58,6 +63,9 @@
       document.removeEventListener("pointermove", this.onPointerMove, true);
       document.removeEventListener("pointerup", this.onPointerUp, true);
       document.removeEventListener("pointercancel", this.onPointerCancel, true);
+      document.removeEventListener("touchmove", this.onTouchMove, true);
+      document.removeEventListener("touchend", this.onTouchEnd, true);
+      document.removeEventListener("touchcancel", this.onTouchEnd, true);
       document.removeEventListener("visibilitychange", this.onVisibilityChange);
       window.removeEventListener("blur", this.onWindowBlur);
       window.removeEventListener("scroll", this.onViewportChange);
@@ -109,6 +117,17 @@
 
     onPointerCancel(event) {
       if (event.pointerId === this.pointerId) this.cancelInteraction();
+    }
+
+    onTouchMove(event) {
+      if (!this.active || !this.pointerDown || !event.touches.length) return;
+      const touch = event.touches[0];
+      event.preventDefault();
+      this.scheduleUpdate(touch.clientX, touch.clientY);
+    }
+
+    onTouchEnd() {
+      if (this.active) this.cancelInteraction();
     }
 
     onVisibilityChange() {
