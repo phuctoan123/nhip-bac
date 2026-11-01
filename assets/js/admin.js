@@ -123,7 +123,7 @@
     }, 15000);
   }
   function login() {
-  app.innerHTML = `<main class="login-page"><section class="login-card"><div class="admin-brand"><img src="assets/nhip-bac-images/logo.jpg"><span>Nhíp Bạc<small>ADMIN CONSOLE</small></span></div><h1>Đăng nhập quản trị</h1><p class="notice">Tài khoản demo dành cho phát triển nội bộ. Dữ liệu và phiên đăng nhập chỉ tồn tại trên trình duyệt này.</p><form id="loginForm"><label>Tên đăng nhập<input name="username" autocomplete="username" required></label><label>Mật khẩu<div class="password-wrap"><input name="password" type="password" autocomplete="current-password" required><button type="button" id="togglePassword" aria-label="Hiện/Ẩn mật khẩu" class="password-toggle-btn"><svg id="eyeIcon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button></div></label><div class="login-error" id="loginError"></div><button class="admin-btn" type="submit">Đăng nhập</button></form></section></main>`;
+  app.innerHTML = `<main class="login-page"><aside class="login-brand-panel" aria-label="Nhíp Bạc"><img src="assets/nhip-bac-images/logo.jpg" alt="Logo Nhíp Bạc"><strong>Nhíp Bạc</strong><p>Quản trị lịch hẹn và nội dung</p></aside><section class="login-card"><div class="admin-brand"><img src="assets/nhip-bac-images/logo.jpg" alt="Logo Nhíp Bạc"><span>Nhíp Bạc<small>ADMIN CONSOLE</small></span></div><h1>Đăng nhập</h1><p class="notice">Tài khoản demo dành cho phát triển nội bộ. Dữ liệu và phiên đăng nhập chỉ tồn tại trên trình duyệt này.</p><form id="loginForm"><label>Tên đăng nhập<input name="username" autocomplete="username" required></label><label>Mật khẩu<div class="password-wrap"><input name="password" type="password" autocomplete="current-password" required><button type="button" id="togglePassword" aria-label="Hiện/Ẩn mật khẩu" class="password-toggle-btn"><svg id="eyeIcon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button></div></label><div class="login-error" id="loginError" role="alert" aria-live="polite"></div><button class="admin-btn" type="submit">Đăng nhập</button></form></section></main>`;
 
   document.getElementById("togglePassword").onclick = function () {
     const i = document.querySelector("[name=password]");
@@ -164,7 +164,7 @@
   };
 }
   function layout() {
-    app.innerHTML = `<div class="admin-shell"><aside class="admin-sidebar"><div class="admin-brand"><img src="assets/nhip-bac-images/logo.jpg"><span>Nhíp Bạc<small>ADMIN CONSOLE</small></span></div><nav class="admin-nav"><a href="#dashboard" data-view="dashboard">▦ <span>Tổng quan</span></a><a href="#services" data-view="services">◈ <span>Dịch vụ & giá</span></a><a href="#reviews" data-view="reviews">★ <span>Đánh giá</span></a><a href="#bookings" data-view="bookings">▣ <span>Lịch đặt hẹn</span></a></nav><button class="logout-btn" id="logout">↪ <span>Đăng xuất</span></button></aside><main class="admin-main"><header class="admin-topbar"><h1 id="pageTitle">Tổng quan</h1><div class="admin-header-actions"><button type="button" class="admin-alert-btn" id="enableNotifications">Bật thông báo</button><button type="button" class="admin-alert-btn" id="enableSound">Bật âm thanh</button><span class="admin-user">◉ Admin · phiên hiện tại</span></div></header><section class="admin-content" id="content"></section></main></div>`;
+    app.innerHTML = `<div class="admin-shell"><aside class="admin-sidebar" id="adminSidebar"><div class="admin-brand"><img src="assets/nhip-bac-images/logo.jpg" alt="Logo Nhíp Bạc"><span>Nhíp Bạc<small>ADMIN CONSOLE</small></span></div><nav class="admin-nav"><a href="#dashboard" data-view="dashboard">▦ <span>Tổng quan</span></a><a href="#services" data-view="services">◈ <span>Dịch vụ & giá</span></a><a href="#reviews" data-view="reviews">★ <span>Đánh giá</span></a><a href="#bookings" data-view="bookings">▣ <span>Lịch đặt hẹn</span></a></nav><button class="logout-btn" id="logout">↪ <span>Đăng xuất</span></button></aside><main class="admin-main"><header class="admin-topbar"><button type="button" class="admin-menu-toggle" id="adminMenuToggle" aria-label="Mở menu quản trị" aria-expanded="false" aria-controls="adminSidebar">☰</button><h1 id="pageTitle">Tổng quan</h1><div class="admin-header-actions"><button type="button" class="admin-alert-btn" id="enableNotifications">Bật thông báo</button><button type="button" class="admin-alert-btn" id="enableSound">Bật âm thanh</button><span class="admin-user">◉ Admin · phiên hiện tại</span></div></header><section class="admin-content" id="content"></section></main></div>`;
     document.getElementById("logout").onclick = () => {
       if (bookingPollTimer) { clearInterval(bookingPollTimer); bookingPollTimer = null; }
       sessionStorage.removeItem(SESSION);
@@ -175,6 +175,18 @@
     document
       .querySelectorAll("[data-view]")
       .forEach((a) => (a.onclick = () => render(a.dataset.view)));
+    const menuToggle = document.getElementById("adminMenuToggle");
+    const sidebar = document.getElementById("adminSidebar");
+    menuToggle?.addEventListener("click", () => {
+      const open = sidebar.classList.toggle("is-open");
+      menuToggle.setAttribute("aria-expanded", String(open));
+    });
+    document.querySelectorAll(".admin-nav a").forEach((a) => {
+      a.addEventListener("click", () => {
+        sidebar?.classList.remove("is-open");
+        menuToggle?.setAttribute("aria-expanded", "false");
+      });
+    });
     document.getElementById("enableNotifications").onclick = async () => {
       if (!("Notification" in window)) return toast("Trình duyệt không hỗ trợ thông báo.");
       const permission = await Notification.requestPermission();
@@ -189,14 +201,23 @@
     };
   }
   function modal(title, body, submit) {
+    const returnFocus = document.activeElement;
     const b = document.createElement("div");
     b.className = "modal-backdrop";
-    b.innerHTML = `<section class="admin-modal"><h2>${title}</h2>${body}</section>`;
+    b.innerHTML = `<section class="admin-modal" role="dialog" aria-modal="true" aria-labelledby="adminModalTitle" tabindex="-1"><h2 id="adminModalTitle">${title}</h2>${body}</section>`;
     document.body.appendChild(b);
+    const close = () => {
+      b.remove();
+      if (returnFocus && typeof returnFocus.focus === "function") returnFocus.focus();
+    };
     b.addEventListener("click", (e) => {
-      if (e.target === b) b.remove();
+      if (e.target === b) close();
     });
-    return { el: b, close: () => b.remove(), submit };
+    b.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") close();
+    });
+    b.querySelector("input, select, textarea, button")?.focus();
+    return { el: b, close, submit };
   }
   function serviceForm(item) {
     const x = item || {
@@ -330,7 +351,7 @@
     const s = NhipBacStore.services.all(),
       r = NhipBacStore.reviews.all(),
       b = NhipBacStore.bookings.all();
-    return `<div class="admin-toolbar"><div><h2>Tổng quan</h2><p>Chào mừng trở lại. Đây là dữ liệu thực tế từ localStorage.</p></div><button class="admin-btn" id="quickService">+ Thêm dịch vụ</button></div><div class="stat-grid"><div class="stat-card"><small>Tổng dịch vụ</small><strong>${s.length}</strong></div><div class="stat-card"><small>Tổng yêu cầu</small><strong>${b.length}</strong></div><div class="stat-card"><small>Yêu cầu mới</small><strong>${b.filter((x) => x.status === "new").length}</strong></div><div class="stat-card"><small>Đã xác nhận</small><strong>${b.filter((x) => x.status === "confirmed").length}</strong></div><div class="stat-card"><small>Tổng đánh giá</small><strong>${r.length}</strong></div><div class="stat-card"><small>Chờ duyệt</small><strong>${r.filter((x) => x.status === "pending").length}</strong></div></div><div class="panel"><h3>Yêu cầu đặt hẹn gần nhất</h3>${bookingView().match(/<table[\s\S]*<\/table>/)?.[0] || "<div class=empty>Chưa có booking.</div>"}</div>`;
+    return `<div class="admin-toolbar"><div><h2>Tổng quan</h2><p>Chào mừng trở lại.</p></div><button class="admin-btn" id="quickService">+ Thêm dịch vụ</button></div><div class="stat-grid"><div class="stat-card"><small>Tổng dịch vụ</small><strong>${s.length}</strong></div><div class="stat-card"><small>Tổng yêu cầu</small><strong>${b.length}</strong></div><div class="stat-card"><small>Yêu cầu mới</small><strong>${b.filter((x) => x.status === "new").length}</strong></div><div class="stat-card"><small>Đã xác nhận</small><strong>${b.filter((x) => x.status === "confirmed").length}</strong></div><div class="stat-card"><small>Tổng đánh giá</small><strong>${r.length}</strong></div><div class="stat-card"><small>Chờ duyệt</small><strong>${r.filter((x) => x.status === "pending").length}</strong></div></div><div class="panel"><h3>Yêu cầu đặt hẹn gần nhất</h3>${bookingView().match(/<table[\s\S]*<\/table>/)?.[0] || "<div class=empty>Chưa có booking.</div>"}</div>`;
   }
   function bind(view) {
     document.querySelectorAll("[data-edit]").forEach(
