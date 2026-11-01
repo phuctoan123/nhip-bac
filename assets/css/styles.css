@@ -1623,41 +1623,58 @@ body.swipe-page-entering-prev main {
   animation: swipe-page-enter-prev 360ms ease both;
 }
 
-.mobile-swipe-hint {
+.swipe-edge-cue {
   position: fixed;
   z-index: 70;
-  right: 16px;
-  bottom: max(20px, env(safe-area-inset-bottom));
-  left: 16px;
+  top: 50%;
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 8px;
-  width: fit-content;
-  max-width: calc(100% - 32px);
-  margin: 0 auto;
-  padding: 10px 15px;
+  min-width: 112px;
+  padding: 8px 12px;
   border: 1px solid var(--line);
   border-radius: 9999px;
-  background: var(--charcoal);
-  color: var(--ivory);
+  background: rgba(255, 250, 243, 0.9);
+  color: var(--charcoal);
   font-size: 14px;
   line-height: 1.4;
   opacity: 0;
   pointer-events: none;
-  transform: translateY(8px);
-  transition: opacity 180ms ease, transform 180ms ease;
+  transform: translateY(-50%) scale(0.94);
+  transition: opacity 160ms ease, transform 160ms ease, border-color 160ms ease;
+  backdrop-filter: saturate(180%) blur(20px);
 }
 
-.mobile-swipe-hint.is-visible {
+.swipe-edge-cue.is-next {
+  right: 12px;
+}
+
+.swipe-edge-cue.is-prev {
+  left: 12px;
+}
+
+.swipe-edge-cue.is-visible {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateY(-50%) scale(1);
 }
 
-.mobile-swipe-hint__icon {
+.swipe-edge-cue__rail {
+  width: calc(3px + (var(--swipe-progress, 0) * 22px));
+  height: 28px;
+  border-radius: 9999px;
+  background: var(--gold);
+}
+
+.swipe-edge-cue__arrow {
   color: var(--gold-bright);
   font-size: 18px;
   line-height: 1;
+}
+
+.swipe-edge-cue__label {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 @keyframes swipe-page-enter-next {
@@ -1679,7 +1696,7 @@ body.swipe-page-entering-prev main {
     transition: none;
   }
 
-  .mobile-swipe-hint {
+  .swipe-edge-cue {
     transition: none;
   }
 }

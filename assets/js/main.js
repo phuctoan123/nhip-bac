@@ -286,27 +286,22 @@ function prefetchPage(pageFile) {
   loadPageTemplate(pageFile).catch(() => {});
 }
 
-function showMobileSwipeHint() {
-  const hintKey = "nhipbac.mobile-swipe-hint.v1";
-  try {
-    if (sessionStorage.getItem(hintKey)) return;
-    sessionStorage.setItem(hintKey, "shown");
-  } catch {
-    // The hint remains non-essential when sessionStorage is unavailable.
-  }
+const swipePageLabels = {
+  "index.html": { vi: "Trang chủ", en: "Home" },
+  "services.html": { vi: "Dịch vụ", en: "Services" },
+  "pricing.html": { vi: "Giá cả", en: "Pricing" },
+  "about.html": { vi: "Về chúng tôi", en: "About" },
+  "reviews.html": { vi: "Đánh giá", en: "Reviews" },
+  "contact.html": { vi: "Liên hệ", en: "Contact" },
+};
 
-  const hint = document.createElement("div");
-  hint.className = "mobile-swipe-hint";
-  hint.setAttribute("role", "status");
-  hint.setAttribute("aria-live", "polite");
-  const isEnglish = document.documentElement.lang === "en";
-  hint.innerHTML = `<span class="mobile-swipe-hint__icon" aria-hidden="true">↔</span><span>${isEnglish ? "Swipe left/right to change pages" : "Vuốt trái/phải để chuyển trang"}</span>`;
-  document.body.appendChild(hint);
-  window.requestAnimationFrame(() => hint.classList.add("is-visible"));
-  window.setTimeout(() => {
-    hint.classList.remove("is-visible");
-    window.setTimeout(() => hint.remove(), 220);
-  }, 4200);
+function createSwipeEdgeCue() {
+  const cue = document.createElement("div");
+  cue.className = "swipe-edge-cue";
+  cue.setAttribute("aria-hidden", "true");
+  cue.innerHTML = `<span class="swipe-edge-cue__rail"></span><span class="swipe-edge-cue__arrow"></span><span class="swipe-edge-cue__label"></span>`;
+  document.body.appendChild(cue);
+  return cue;
 }
 
 function syncPageHead(template) {
@@ -373,6 +368,30 @@ function initMobileSwipeNavigation() {
   let touchStartX = 0;
   let touchStartY = 0;
   let prefetchedDirection = "";
+  const cue = createSwipeEdgeCue();
+  const cueArrow = cue.querySelector(".swipe-edge-cue__arrow");
+  const cueLabel = cue.querySelector(".swipe-edge-cue__label");
+
+  const hideCue = () => {
+    cue.classList.remove("is-visible", "is-next", "is-prev");
+    cue.style.setProperty("--swipe-progress", "0");
+  };
+
+  const showCue = (deltaX, pageFile) => {
+    if (!pageFile) {
+      hideCue();
+      return;
+    }
+    const direction = deltaX < 0 ? "next" : "prev";
+    const progress = Math.min(1, Math.abs(deltaX) / 90);
+    const language = document.documentElement.lang === "en" ? "en" : "vi";
+    cue.classList.toggle("is-next", direction === "next");
+    cue.classList.toggle("is-prev", direction === "prev");
+    cue.classList.add("is-visible");
+    cue.style.setProperty("--swipe-progress", String(progress));
+    cueArrow.textContent = direction === "next" ? "←" : "→";
+    cueLabel.textContent = swipePageLabels[pageFile]?.[language] || pageFile;
+  };
 
   const adjacentPage = (deltaX) => {
     const index = pages.indexOf(renderedPageFile());
@@ -384,11 +403,13 @@ function initMobileSwipeNavigation() {
   const onTouchStart = (event) => {
     if (event.touches.length !== 1) {
       tracking = false;
+      hideCue();
       return;
     }
     const target = event.target instanceof Element ? event.target : null;
     if (target?.closest("a, button, input, textarea, select, [data-phone-dock], .social-floating-dock, .screen-magnifier")) {
       tracking = false;
+      hideCue();
       return;
     }
     tracking = true;
@@ -401,15 +422,19 @@ function initMobileSwipeNavigation() {
     if (!tracking || event.touches.length !== 1) return;
     if (document.body.classList.contains("screen-magnifier-dragging")) {
       tracking = false;
+      hideCue();
       return;
     }
     const deltaX = event.touches[0].screenX - touchStartX;
     const deltaY = event.touches[0].screenY - touchStartY;
     if (Math.abs(deltaX) < 24 || Math.abs(deltaX) <= Math.abs(deltaY)) return;
     const direction = deltaX < 0 ? "next" : "prev";
-    if (prefetchedDirection === direction) return;
-    prefetchedDirection = direction;
-    prefetchPage(adjacentPage(deltaX));
+    const pageFile = adjacentPage(deltaX);
+    if (prefetchedDirection !== direction) {
+      prefetchedDirection = direction;
+      prefetchPage(pageFile);
+    }
+    showCue(deltaX, pageFile);
   };
 
   const onTouchEnd = (event) => {
@@ -417,6 +442,7 @@ function initMobileSwipeNavigation() {
     tracking = false;
     const deltaX = event.changedTouches[0].screenX - touchStartX;
     const deltaY = event.changedTouches[0].screenY - touchStartY;
+    hideCue();
     if (Math.abs(deltaX) < 90 || Math.abs(deltaX) <= Math.abs(deltaY)) return;
     const pageFile = adjacentPage(deltaX);
     if (pageFile) softNavigate(pageFile, deltaX < 0 ? "next" : "prev");
@@ -431,17 +457,19 @@ function initMobileSwipeNavigation() {
   window.addEventListener("touchmove", onTouchMove, { passive: true });
   window.addEventListener("touchend", onTouchEnd, { passive: true });
   window.addEventListener("popstate", onPopState);
+  window.addEventListener("touchcancel", hideCue, { passive: true });
 
   const index = pages.indexOf(renderedPageFile());
   if (index > 0) prefetchPage(pages[index - 1]);
   if (index >= 0 && index < pages.length - 1) prefetchPage(pages[index + 1]);
-  if (window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0) showMobileSwipeHint();
 
   mobileSwipeNavigationCleanup = () => {
     window.removeEventListener("touchstart", onTouchStart);
     window.removeEventListener("touchmove", onTouchMove);
     window.removeEventListener("touchend", onTouchEnd);
     window.removeEventListener("popstate", onPopState);
+    window.removeEventListener("touchcancel", hideCue);
+    cue.remove();
     mobileSwipeNavigationCleanup = null;
   };
   registerPageCleanup(() => mobileSwipeNavigationCleanup?.());
