@@ -1,0 +1,44 @@
+.screen-magnifier {
+  position: fixed;
+  z-index: 10000;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 120ms ease, visibility 120ms ease;
+}
+
+.screen-magnifier.is-visible {
+  visibility: visible;
+  opacity: 1;
+}
+
+.screen-magnifier__scene {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  pointer-events: none;
+  user-select: none;
+  will-change: transform;
+}
+
+.screen-magnifier__lens {
+  position: fixed;
+  pointer-events: none;
+  overflow: hidden;
+  width: 150px;
+  height: 150px;
+  border: 3px solid var(--gold, #d4af37);
+  border-radius: 50%;
+  background: var(--ivory, #fffaf3);
+  box-shadow: 0 8px 28px rgba(23, 21, 18, 0.28), inset 0 0 0 1px rgba(255, 250, 243, 0.8);
+  contain: paint;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screen-magnifier {
+    transition: none;
+  }
+}
