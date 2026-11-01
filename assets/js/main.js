@@ -286,6 +286,29 @@ function prefetchPage(pageFile) {
   loadPageTemplate(pageFile).catch(() => {});
 }
 
+function showMobileSwipeHint() {
+  const hintKey = "nhipbac.mobile-swipe-hint.v1";
+  try {
+    if (sessionStorage.getItem(hintKey)) return;
+    sessionStorage.setItem(hintKey, "shown");
+  } catch {
+    // The hint remains non-essential when sessionStorage is unavailable.
+  }
+
+  const hint = document.createElement("div");
+  hint.className = "mobile-swipe-hint";
+  hint.setAttribute("role", "status");
+  hint.setAttribute("aria-live", "polite");
+  const isEnglish = document.documentElement.lang === "en";
+  hint.innerHTML = `<span class="mobile-swipe-hint__icon" aria-hidden="true">↔</span><span>${isEnglish ? "Swipe left/right to change pages" : "Vuốt trái/phải để chuyển trang"}</span>`;
+  document.body.appendChild(hint);
+  window.requestAnimationFrame(() => hint.classList.add("is-visible"));
+  window.setTimeout(() => {
+    hint.classList.remove("is-visible");
+    window.setTimeout(() => hint.remove(), 220);
+  }, 4200);
+}
+
 function syncPageHead(template) {
   document.title = template.title;
   document.documentElement.lang = template.lang;
@@ -412,6 +435,7 @@ function initMobileSwipeNavigation() {
   const index = pages.indexOf(renderedPageFile());
   if (index > 0) prefetchPage(pages[index - 1]);
   if (index >= 0 && index < pages.length - 1) prefetchPage(pages[index + 1]);
+  if (window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0) showMobileSwipeHint();
 
   mobileSwipeNavigationCleanup = () => {
     window.removeEventListener("touchstart", onTouchStart);

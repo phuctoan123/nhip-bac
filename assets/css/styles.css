@@ -1623,6 +1623,43 @@ body.swipe-page-entering-prev main {
   animation: swipe-page-enter-prev 360ms ease both;
 }
 
+.mobile-swipe-hint {
+  position: fixed;
+  z-index: 70;
+  right: 16px;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  left: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: fit-content;
+  max-width: calc(100% - 32px);
+  margin: 0 auto;
+  padding: 10px 15px;
+  border: 1px solid var(--line);
+  border-radius: 9999px;
+  background: var(--charcoal);
+  color: var(--ivory);
+  font-size: 14px;
+  line-height: 1.4;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.mobile-swipe-hint.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.mobile-swipe-hint__icon {
+  color: var(--gold-bright);
+  font-size: 18px;
+  line-height: 1;
+}
+
 @keyframes swipe-page-enter-next {
   from { opacity: 0; transform: translateX(24px); }
   to { opacity: 1; transform: translateX(0); }
@@ -1639,6 +1676,10 @@ body.swipe-page-entering-prev main {
   body.swipe-page-entering-next main,
   body.swipe-page-entering-prev main {
     animation: none;
+    transition: none;
+  }
+
+  .mobile-swipe-hint {
     transition: none;
   }
 }
