@@ -348,6 +348,7 @@ function initSocialDockAnimation() {
 
   // Đợi một chút cho trang load xong
   setTimeout(() => {
+    if (socialDock.classList.contains('hidden')) return;
     socialDock.classList.add('show');
 
     // Hiển thị từng item
@@ -367,6 +368,7 @@ function initSocialDockSwipeVertical() {
   let isHidden = localStorage.getItem(STORAGE_KEY) === "true";
 
   let touchStartY = 0;
+  let touchStartX = 0;
   let isDragging = false;
 
   function showDock() {
@@ -383,36 +385,35 @@ function initSocialDockSwipeVertical() {
   // Touch events
   dock.addEventListener('touchstart', (e) => {
     touchStartY = e.changedTouches[0].screenY;
-    isDragging = true;
-  }, { passive: false });
+    touchStartX = e.changedTouches[0].screenX;
+    isDragging = false;
+  }, { passive: true });
 
   dock.addEventListener('touchmove', (e) => {
-    if (!isDragging) return;
+    if (e.changedTouches.length === 0) return;
     const currentY = e.changedTouches[0].screenY;
+    const currentX = e.changedTouches[0].screenX;
     const deltaY = currentY - touchStartY;
-
-    // Nếu quẹt xuống khá mạnh → ngăn scroll trang
-    if (deltaY > 30) {
-      e.preventDefault();   // Ngăn scroll trang
-    }
-  }, { passive: false });
+    const deltaX = currentX - touchStartX;
+    if (Math.abs(deltaY) > 12 || Math.abs(deltaX) > 12) isDragging = true;
+  }, { passive: true });
 
   dock.addEventListener('touchend', (e) => {
-    if (!isDragging) return;
-    isDragging = false;
-
     const touchEndY = e.changedTouches[0].screenY;
     const deltaY = touchEndY - touchStartY;
 
-    // Quẹt xuống (ẩn) - ngưỡng cao hơn để tránh nhầm scroll
-    if (deltaY > 100) {
+    // Chỉ xử lý swipe đủ xa; tap ngắn vẫn để trình duyệt phát sinh click.
+    if (isDragging && deltaY > 100) {
       hideDock();
-    }
-    // Quẹt lên (hiện)
-    else if (deltaY < -90 && dock.classList.contains('hidden')) {
+    } else if (isDragging && deltaY < -90 && dock.classList.contains('hidden')) {
       showDock();
     }
-  }, { passive: false });
+    isDragging = false;
+  }, { passive: true });
+
+  dock.addEventListener('touchcancel', () => {
+    isDragging = false;
+  }, { passive: true });
 
   // Khởi tạo
   if (isHidden) {
