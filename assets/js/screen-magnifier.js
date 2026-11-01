@@ -39,7 +39,7 @@
       this.enabled = true;
       if (this.listenersAttached) return this;
       document.addEventListener("pointerdown", this.onPointerDown, { capture: true, passive: true });
-      document.addEventListener("pointermove", this.onPointerMove, { capture: true, passive: true });
+      document.addEventListener("pointermove", this.onPointerMove, { capture: true, passive: false });
       document.addEventListener("pointerup", this.onPointerUp, { capture: true, passive: true });
       document.addEventListener("pointercancel", this.onPointerCancel, { capture: true, passive: true });
       document.addEventListener("visibilitychange", this.onVisibilityChange);
@@ -98,6 +98,8 @@
         if (Math.hypot(dx, dy) > this.options.moveTolerance) this.cancelInteraction();
         return;
       }
+      // Sau khi kích hoạt, di chuyển ngón tay là kéo kính lúp thay vì cuộn trang.
+      event.preventDefault();
       this.scheduleUpdate(event.clientX, event.clientY);
     }
 
@@ -126,6 +128,7 @@
       this.ensureOverlay();
       this.buildScene();
       this.active = true;
+      document.body.classList.add("screen-magnifier-dragging");
       this.overlay.classList.add("is-visible");
       this.scheduleUpdate(x, y);
     }
@@ -136,6 +139,7 @@
       this.pointerDown = false;
       this.pointerId = null;
       this.active = false;
+      document.body.classList.remove("screen-magnifier-dragging");
       if (this.overlay) this.overlay.classList.remove("is-visible");
     }
 
