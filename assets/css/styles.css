@@ -1539,6 +1539,32 @@ cite {
   animation: success-fade-in 0.35s ease both;
 }
 
+.booking-form button[type="submit"].is-loading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  cursor: wait;
+  opacity: 0.82;
+}
+
+.booking-form button[type="submit"].is-loading:hover {
+  transform: none;
+}
+
+.booking-spinner {
+  width: 17px;
+  height: 17px;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: booking-spin 0.7s linear infinite;
+}
+
+@keyframes booking-spin {
+  to { transform: rotate(360deg); }
+}
+
 .booking-success-card {
   position: relative;
   width: min(520px, 100%);
