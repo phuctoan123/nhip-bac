@@ -9,6 +9,22 @@ const pageMap = {
   contact: "contact.html",
 };
 
+let pageCleanups = [];
+
+function registerPageCleanup(cleanup) {
+  pageCleanups.push(cleanup);
+}
+
+function cleanupPublicPage() {
+  pageCleanups.splice(0).forEach((cleanup) => {
+    try {
+      cleanup();
+    } catch (error) {
+      console.warn("Nhíp Bạc page cleanup failed", error);
+    }
+  });
+}
+
 function setLanguage(lang) {
   const activeLang = lang === "en" ? "en" : "vi";
   document.documentElement.lang = activeLang;
@@ -38,9 +54,13 @@ function setLanguage(lang) {
 
 function initLanguage() {
   const saved = localStorage.getItem(STORAGE_KEY) || "vi";
+  const handlers = [];
   document.querySelectorAll(".lang-btn").forEach((button) => {
-    button.addEventListener("click", () => setLanguage(button.dataset.lang));
+    const handler = () => setLanguage(button.dataset.lang);
+    button.addEventListener("click", handler);
+    handlers.push([button, handler]);
   });
+  registerPageCleanup(() => handlers.forEach(([button, handler]) => button.removeEventListener("click", handler)));
   setLanguage(saved);
 }
 
@@ -111,6 +131,7 @@ async function initContactPhone() {
 }
 
 function initPhoneDock() {
+  const listeners = [];
   document.querySelectorAll("[data-phone-dock]").forEach((group) => {
     const trigger = group.querySelector(".dock-phone");
     if (!trigger) return;
@@ -118,18 +139,31 @@ function initPhoneDock() {
       group.classList.toggle("is-open", open);
       trigger.setAttribute("aria-expanded", String(open));
     };
-    trigger.addEventListener("click", () => setOpen(!group.classList.contains("is-open")));
-    group.addEventListener("focusin", () => trigger.setAttribute("aria-expanded", "true"));
-    group.addEventListener("focusout", (event) => {
+    const onClick = () => setOpen(!group.classList.contains("is-open"));
+    const onFocusIn = () => trigger.setAttribute("aria-expanded", "true");
+    const onFocusOut = (event) => {
       if (!group.contains(event.relatedTarget)) setOpen(false);
-    });
-    document.addEventListener("click", (event) => {
+    };
+    const onDocumentClick = (event) => {
       if (!group.contains(event.target)) setOpen(false);
-    });
-    document.addEventListener("keydown", (event) => {
+    };
+    const onDocumentKeydown = (event) => {
       if (event.key === "Escape") setOpen(false);
+    };
+    trigger.addEventListener("click", onClick);
+    group.addEventListener("focusin", onFocusIn);
+    group.addEventListener("focusout", onFocusOut);
+    document.addEventListener("click", onDocumentClick);
+    document.addEventListener("keydown", onDocumentKeydown);
+    listeners.push(() => {
+      trigger.removeEventListener("click", onClick);
+      group.removeEventListener("focusin", onFocusIn);
+      group.removeEventListener("focusout", onFocusOut);
+      document.removeEventListener("click", onDocumentClick);
+      document.removeEventListener("keydown", onDocumentKeydown);
     });
   });
+  registerPageCleanup(() => listeners.forEach((cleanup) => cleanup()));
 }
 
 function initNavigation() {
@@ -138,11 +172,13 @@ function initNavigation() {
 
   if (!toggle || !nav) return;
 
-  toggle.addEventListener("click", () => {
+  const onToggle = () => {
     const isOpen = nav.classList.toggle("is-open");
     document.body.classList.toggle("nav-open", isOpen);
     toggle.setAttribute("aria-expanded", String(isOpen));
-  });
+  };
+  toggle.addEventListener("click", onToggle);
+  registerPageCleanup(() => toggle.removeEventListener("click", onToggle));
 }
 
 function initReveal() {
@@ -163,6 +199,7 @@ function initReveal() {
   });
 
   items.forEach((item) => observer.observe(item));
+  registerPageCleanup(() => observer.disconnect());
 }
 
 function initCarousel() {
@@ -194,56 +231,196 @@ function initCarousel() {
   }
 
   // Auto-rotate every 6 seconds
-  setInterval(() => {
+  const intervalId = setInterval(() => {
     goToSlide((currentIndex + 1) % slides.length);
   }, 6000);
+  registerPageCleanup(() => clearInterval(intervalId));
+}
+
+const pageTemplateCache = new Map();
+const pageTemplateRequests = new Map();
+let mobileSwipeNavigationCleanup = null;
+let navigationInFlight = false;
+
+function currentPageFile() {
+  return window.location.pathname.split("/").pop() || "index.html";
+}
+
+function renderedPageFile() {
+  const pageKey = document.body?.dataset.page;
+  return pageMap[pageKey] || currentPageFile();
+}
+
+async function loadPageTemplate(pageFile) {
+  if (pageTemplateCache.has(pageFile)) return pageTemplateCache.get(pageFile);
+  if (pageTemplateRequests.has(pageFile)) return pageTemplateRequests.get(pageFile);
+
+  const request = fetch(pageFile, { headers: { Accept: "text/html" } })
+    .then((response) => {
+      if (!response.ok) throw new Error(`Page request failed: ${response.status}`);
+      return response.text();
+    })
+    .then((html) => {
+      const parsed = new DOMParser().parseFromString(html, "text/html");
+      const main = parsed.querySelector("main");
+      if (!main) throw new Error("Target page has no main element");
+      const template = {
+        main,
+        title: parsed.title,
+        lang: parsed.documentElement.lang || "vi",
+        page: parsed.body?.dataset.page || "",
+        description: parsed.head.querySelector('meta[name="description"]')?.content || "",
+        canonical: parsed.head.querySelector('link[rel="canonical"]')?.getAttribute("href") || "",
+      };
+      pageTemplateCache.set(pageFile, template);
+      return template;
+    })
+    .finally(() => pageTemplateRequests.delete(pageFile));
+
+  pageTemplateRequests.set(pageFile, request);
+  return request;
+}
+
+function prefetchPage(pageFile) {
+  if (!pageFile || pageFile === renderedPageFile()) return;
+  loadPageTemplate(pageFile).catch(() => {});
+}
+
+function syncPageHead(template) {
+  document.title = template.title;
+  document.documentElement.lang = template.lang;
+  const description = document.head.querySelector('meta[name="description"]');
+  if (description && template.description) description.content = template.description;
+  const canonical = document.head.querySelector('link[rel="canonical"]');
+  if (canonical && template.canonical) canonical.href = new URL(template.canonical, window.location.href).href;
+}
+
+function wait(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+async function softNavigate(pageFile, direction, historyMode = "push") {
+  if (navigationInFlight || (historyMode === "push" && pageFile === renderedPageFile())) return;
+  navigationInFlight = true;
+
+  try {
+    const template = await loadPageTemplate(pageFile);
+    const replacePage = () => {
+      const currentMain = document.querySelector("main");
+      if (!currentMain) throw new Error("Current page has no main element");
+      currentMain.replaceWith(template.main.cloneNode(true));
+      syncPageHead(template);
+      if (template.page) document.body.dataset.page = template.page;
+      document.body.classList.remove("nav-open");
+      document.querySelectorAll(".poster-modal, .booking-success-overlay").forEach((node) => node.remove());
+      if (historyMode === "push") history.pushState({ page: pageFile }, "", pageFile);
+      if (historyMode === "replace") history.replaceState({ page: pageFile }, "", pageFile);
+      window.scrollTo(0, 0);
+      initPublicPage();
+    };
+
+    if (typeof document.startViewTransition === "function") {
+      const transition = document.startViewTransition(replacePage);
+      await transition.finished.catch(() => {});
+    } else {
+      const leavingClass = `swipe-page-leaving-${direction}`;
+      document.body.classList.add(leavingClass);
+      await wait(140);
+      replacePage();
+      document.body.classList.remove(leavingClass);
+      const enteringClass = `swipe-page-entering-${direction}`;
+      document.body.classList.add(enteringClass);
+      window.requestAnimationFrame(() => window.setTimeout(() => document.body.classList.remove(enteringClass), 360));
+    }
+  } catch (error) {
+    console.warn("Soft navigation failed; using full navigation", error);
+    if (historyMode === "none" || historyMode === "replace") window.location.reload();
+    else window.location.href = pageFile;
+  } finally {
+    navigationInFlight = false;
+  }
 }
 
 function initMobileSwipeNavigation() {
+  if (mobileSwipeNavigationCleanup) mobileSwipeNavigationCleanup();
   if (window.innerWidth > 768) return;
 
   const pages = Object.values(pageMap);
-  const currentPath = window.location.pathname.split("/").pop() || "index.html";
-  const currentIndex = pages.indexOf(currentPath);
-
+  let tracking = false;
   let touchStartX = 0;
   let touchStartY = 0;
+  let prefetchedDirection = "";
 
-  document.body.style.transition = "transform .45s cubic-bezier(.22,1,.36,1), opacity .45s ease";
+  const adjacentPage = (deltaX) => {
+    const index = pages.indexOf(renderedPageFile());
+    if (index < 0) return null;
+    const targetIndex = deltaX < 0 ? index + 1 : index - 1;
+    return targetIndex >= 0 && targetIndex < pages.length ? pages[targetIndex] : null;
+  };
 
-  window.addEventListener("touchstart", (event) => {
-    touchStartX = event.changedTouches[0].screenX;
-    touchStartY = event.changedTouches[0].screenY;
-  }, { passive: true });
-
-  window.addEventListener("touchend", (event) => {
-    const touchEndX = event.changedTouches[0].screenX;
-    const touchEndY = event.changedTouches[0].screenY;
-
-    const deltaX = touchEndX - touchStartX;
-    const deltaY = touchEndY - touchStartY;
-
-    if (Math.abs(deltaY) > Math.abs(deltaX)) return;
-    if (Math.abs(deltaX) < 90) return;
-
-    if (deltaX < 0 && currentIndex < pages.length - 1) {
-      document.body.style.transform = "translateX(-100px)";
-      document.body.style.opacity = ".15";
-
-      setTimeout(() => {
-        window.location.href = pages[currentIndex + 1];
-      }, 320);
+  const onTouchStart = (event) => {
+    if (event.touches.length !== 1) {
+      tracking = false;
+      return;
     }
-
-    if (deltaX > 0 && currentIndex > 0) {
-      document.body.style.transform = "translateX(100px)";
-      document.body.style.opacity = ".15";
-
-      setTimeout(() => {
-        window.location.href = pages[currentIndex - 1];
-      }, 320);
+    const target = event.target instanceof Element ? event.target : null;
+    if (target?.closest("a, button, input, textarea, select, [data-phone-dock], .social-floating-dock, .screen-magnifier")) {
+      tracking = false;
+      return;
     }
-  }, { passive: true });
+    tracking = true;
+    prefetchedDirection = "";
+    touchStartX = event.touches[0].screenX;
+    touchStartY = event.touches[0].screenY;
+  };
+
+  const onTouchMove = (event) => {
+    if (!tracking || event.touches.length !== 1) return;
+    if (document.body.classList.contains("screen-magnifier-dragging")) {
+      tracking = false;
+      return;
+    }
+    const deltaX = event.touches[0].screenX - touchStartX;
+    const deltaY = event.touches[0].screenY - touchStartY;
+    if (Math.abs(deltaX) < 24 || Math.abs(deltaX) <= Math.abs(deltaY)) return;
+    const direction = deltaX < 0 ? "next" : "prev";
+    if (prefetchedDirection === direction) return;
+    prefetchedDirection = direction;
+    prefetchPage(adjacentPage(deltaX));
+  };
+
+  const onTouchEnd = (event) => {
+    if (!tracking || !event.changedTouches.length) return;
+    tracking = false;
+    const deltaX = event.changedTouches[0].screenX - touchStartX;
+    const deltaY = event.changedTouches[0].screenY - touchStartY;
+    if (Math.abs(deltaX) < 90 || Math.abs(deltaX) <= Math.abs(deltaY)) return;
+    const pageFile = adjacentPage(deltaX);
+    if (pageFile) softNavigate(pageFile, deltaX < 0 ? "next" : "prev");
+  };
+
+  const onPopState = () => {
+    const pageFile = currentPageFile();
+    if (pageFile !== renderedPageFile()) softNavigate(pageFile, "prev", "none");
+  };
+
+  window.addEventListener("touchstart", onTouchStart, { passive: true });
+  window.addEventListener("touchmove", onTouchMove, { passive: true });
+  window.addEventListener("touchend", onTouchEnd, { passive: true });
+  window.addEventListener("popstate", onPopState);
+
+  const index = pages.indexOf(renderedPageFile());
+  if (index > 0) prefetchPage(pages[index - 1]);
+  if (index >= 0 && index < pages.length - 1) prefetchPage(pages[index + 1]);
+
+  mobileSwipeNavigationCleanup = () => {
+    window.removeEventListener("touchstart", onTouchStart);
+    window.removeEventListener("touchmove", onTouchMove);
+    window.removeEventListener("touchend", onTouchEnd);
+    window.removeEventListener("popstate", onPopState);
+    mobileSwipeNavigationCleanup = null;
+  };
+  registerPageCleanup(() => mobileSwipeNavigationCleanup?.());
 }
 
 function initFloatingSocialDock() {
@@ -304,15 +481,15 @@ function initMagnifier() {
   const lensSize = 120;
   const zoom = 2.6; // 6x magnification (264/44 = 6x for 44px logo)
 
-  logoImg.addEventListener("mouseenter", () => {
+  const onMouseEnter = () => {
     lens.classList.add("active");
-  });
+  };
 
-  logoImg.addEventListener("mouseleave", () => {
+  const onMouseLeave = () => {
     lens.classList.remove("active");
-  });
+  };
 
-  logoImg.addEventListener("mousemove", (e) => {
+  const onMouseMove = (e) => {
     const rect = logoImg.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -338,6 +515,16 @@ function initMagnifier() {
 
     lens.style.backgroundImage = `url('${logoImg.src}')`;
     lens.style.backgroundPosition = `${-bgX + lensSize / 2}px ${-bgY + lensSize / 2}px`;
+  };
+
+  logoImg.addEventListener("mouseenter", onMouseEnter);
+  logoImg.addEventListener("mouseleave", onMouseLeave);
+  logoImg.addEventListener("mousemove", onMouseMove);
+  registerPageCleanup(() => {
+    logoImg.removeEventListener("mouseenter", onMouseEnter);
+    logoImg.removeEventListener("mouseleave", onMouseLeave);
+    logoImg.removeEventListener("mousemove", onMouseMove);
+    lens.remove();
   });
 }
 
@@ -345,20 +532,22 @@ function initMagnifier() {
 function initSocialDockAnimation() {
   const socialDock = document.querySelector('.social-floating-dock');
   if (!socialDock) return;
+  const timers = [];
 
   // Đợi một chút cho trang load xong
-  setTimeout(() => {
+  timers.push(setTimeout(() => {
     if (socialDock.classList.contains('hidden')) return;
     socialDock.classList.add('show');
 
     // Hiển thị từng item
     const items = socialDock.querySelectorAll('.dock-item');
     items.forEach((item, index) => {
-      setTimeout(() => {
+      timers.push(setTimeout(() => {
         item.classList.add('show');
-      }, 200 + index * 150); // stagger effect
+      }, 200 + index * 150)); // stagger effect
     });
-  }, 800); // Delay tổng khi trang load
+  }, 800)); // Delay tổng khi trang load
+  registerPageCleanup(() => timers.forEach((timer) => clearTimeout(timer)));
 }
 function initSocialDockSwipeVertical() {
   const dock = document.getElementById('socialDock');
@@ -505,15 +694,16 @@ function initPublicData() {
       if (services.some(s => s.id === currentValue)) select.value = currentValue;
     };
     renderServiceOptions();
-    window.addEventListener("nhipbac:language-changed", event => renderServiceOptions(event.detail?.lang));
+    const onLanguageChanged = (event) => renderServiceOptions(event.detail?.lang);
+    window.addEventListener("nhipbac:language-changed", onLanguageChanged);
+    registerPageCleanup(() => window.removeEventListener("nhipbac:language-changed", onLanguageChanged));
   }
   const form=document.getElementById("bookingForm");
   if(form) form.addEventListener("submit", async e=>{e.preventDefault();if(form.dataset.submitting==="true")return;const f=new FormData(form), name=String(f.get("name")||"").trim(),phone=String(f.get("phone")||"").trim(),sid=String(f.get("service")||""),service=services.find(s=>s.id===sid),message=document.getElementById("bookingMessage");if(!name||!phone){message.textContent="Vui lòng nhập họ tên và số điện thoại.";message.style.color="#b94a43";return}form.dataset.submitting="true";setBookingLoading(form,true);const record={customerName:name,phone,serviceId:sid,serviceNameSnapshot:service?.nameVi||"Dịch vụ không xác định",preferredDate:f.get("date")||"",preferredTime:f.get("time")||"",message:f.get("note")||""};const result=await saveBooking(record);message.textContent=result.ok?"Đã ghi nhận yêu cầu. Nhíp Bạc sẽ liên hệ để xác nhận lịch.":result.error;message.style.color=result.ok?"#287344":"#b94a43";if(result.ok){form.reset();showBookingSuccess({...record,id:result.data?.booking?.id||NhipBacStore.id("booking"),bookingCode:result.data?.booking?.bookingCode});}setBookingLoading(form,false);setTimeout(()=>form.dataset.submitting="false",700)});
-  setLanguage(localStorage.getItem(STORAGE_KEY) || "vi");
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-
+function initPublicPage() {
+  cleanupPublicPage();
   initLanguage();
   initActiveNav();
   initContactPhone();
@@ -528,4 +718,6 @@ document.addEventListener("DOMContentLoaded", () => {
   initBookingCalendar();
   initPublicData();
   initReveal();
-});
+}
+
+document.addEventListener("DOMContentLoaded", initPublicPage, { once: true });

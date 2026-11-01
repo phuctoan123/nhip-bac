@@ -1602,6 +1602,47 @@ cite {
   }
 }
 
+/* Soft page navigation used by the mobile swipe router. */
+body.swipe-page-leaving-next main {
+  opacity: 0;
+  transform: translateX(-24px);
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+body.swipe-page-leaving-prev main {
+  opacity: 0;
+  transform: translateX(24px);
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+body.swipe-page-entering-next main {
+  animation: swipe-page-enter-next 360ms ease both;
+}
+
+body.swipe-page-entering-prev main {
+  animation: swipe-page-enter-prev 360ms ease both;
+}
+
+@keyframes swipe-page-enter-next {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes swipe-page-enter-prev {
+  from { opacity: 0; transform: translateX(-24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.swipe-page-leaving-next main,
+  body.swipe-page-leaving-prev main,
+  body.swipe-page-entering-next main,
+  body.swipe-page-entering-prev main {
+    animation: none;
+    transition: none;
+  }
+}
+
 .booking-success-overlay {
   position: fixed;
   z-index: 300;
