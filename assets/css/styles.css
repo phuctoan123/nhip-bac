@@ -6,6 +6,8 @@
   --ink: #171512;
   --charcoal: #282521;
   --muted: #746d63;
+  --success: #287344;
+  --success-strong: #1f5f38;
   --blue: #dceaf2;
   --line: rgba(212, 175, 55, 0.28);
   --shadow: 0 24px 70px rgba(23, 21, 18, 0.16);
@@ -1298,6 +1300,17 @@ cite {
   opacity: 0;
   transform: scale(0.6) translateY(20px);
   transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); /* bouncy effect */
+}
+
+.dock-item.dock-phone {
+  background: var(--success);
+  border-color: var(--success);
+  color: #fff;
+}
+
+.dock-item.dock-phone:hover {
+  background: var(--success-strong);
+  border-color: var(--success-strong);
 }
 
 .dock-item.show {

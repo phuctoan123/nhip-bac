@@ -64,6 +64,34 @@ function initActiveNav() {
   });
 }
 
+const DEFAULT_CONTACT_PHONE = "0934013486";
+
+function normalizeContactPhone(value) {
+  const phone = String(value || "").trim().replace(/[^0-9+().\-\s]/g, "");
+  return /^[0-9+().\-\s]{8,25}$/.test(phone) ? phone : DEFAULT_CONTACT_PHONE;
+}
+
+function applyContactPhone(value) {
+  const phone = normalizeContactPhone(value);
+  const dialable = phone.replace(/(?!^\+)\D/g, "");
+  document.querySelectorAll("[data-contact-phone]").forEach((link) => {
+    link.href = `tel:${dialable}`;
+    link.setAttribute("aria-label", `Gọi Nhíp Bạc ${phone}`);
+  });
+}
+
+async function initContactPhone() {
+  applyContactPhone(DEFAULT_CONTACT_PHONE);
+  try {
+    const response = await fetch("/api/settings?key=contact_phone", { cache: "no-store" });
+    if (!response.ok) return;
+    const data = await response.json();
+    applyContactPhone(data.value?.phone || data.phone);
+  } catch {
+    // Local static previews use the default number until the API is available.
+  }
+}
+
 function initNavigation() {
   const toggle = document.querySelector(".nav-toggle");
   const nav = document.querySelector(".site-nav");
@@ -502,6 +530,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   initLanguage();
   initActiveNav();
+  initContactPhone();
   initNavigation();
   initCarousel();
   initMobileSwipeNavigation();

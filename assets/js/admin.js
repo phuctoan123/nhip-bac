@@ -4,6 +4,7 @@
   const config = { username: "admin", passwordHash: HASH }; // Local fallback only. Production auth uses /api/admin/auth.
   const TOKEN = "nhipbac.admin.token.v1";
   let remoteBookingError = "";
+  let contactPhone = "0934013486";
   const app = document.getElementById("adminApp"),
     esc = (s) =>
       String(s ?? "").replace(
@@ -73,6 +74,22 @@
       NhipBacStore.bookings.save(rows.map(x => ({ id: x.id, bookingCode: x.booking_code || "", customerName: x.customer_name, phone: x.phone, serviceId: x.service_id || "", serviceNameSnapshot: x.service_name_snapshot, preferredDate: x.preferred_date || "", preferredTime: x.preferred_time || "", message: x.message || "", createdAt: x.created_at, status: x.status, adminNote: x.admin_note || "", updatedAt: x.updated_at })));
       return true;
     } catch (error) { remoteBookingError = "Không thể kết nối tới API booking của Vercel."; return false; }
+  }
+  function normalizeContactPhone(value) {
+    const phone = String(value || "").trim().replace(/[^0-9+().\-\s]/g, "");
+    return /^[0-9+().\-\s]{8,25}$/.test(phone) ? phone : "";
+  }
+  async function hydrateRemoteSettings() {
+    const token = sessionStorage.getItem(TOKEN);
+    if (!token) return;
+    try {
+      const response = await fetch("/api/admin/settings", { headers: { Authorization: `Bearer ${token}` } });
+      if (!response.ok) return;
+      const data = await response.json();
+      contactPhone = normalizeContactPhone(data.value?.phone || data.phone) || contactPhone;
+    } catch {
+      // Keep the current fallback when the settings endpoint is unavailable.
+    }
   }
   let bookingPollTimer = null;
   let bookingSnapshotReady = false;
@@ -158,6 +175,7 @@
       if (remoteToken) sessionStorage.setItem(TOKEN, remoteToken);
       location.hash = "#dashboard";
       await hydrateRemoteBookings();
+      await hydrateRemoteSettings();
       startBookingPolling();
       render();
     } else err.textContent = "Tên đăng nhập hoặc mật khẩu không đúng.";
@@ -300,6 +318,46 @@
       render();
     };
   }
+  function contactSettingsForm() {
+    return `<form class="admin-form" id="contactSettingsForm"><label class="full">Số điện thoại gọi nhanh<input name="phone" type="tel" inputmode="tel" autocomplete="tel" value="${esc(contactPhone)}" required><small class="form-help">Số này sẽ được dùng cho biểu tượng điện thoại trên toàn bộ website.</small></label><div class="modal-actions full"><button type="button" class="admin-btn secondary" data-cancel>Hủy</button><button class="admin-btn">Lưu số điện thoại</button></div></form>`;
+  }
+  function openContactSettings() {
+    const m = modal("Số điện thoại liên hệ", contactSettingsForm());
+    m.el.querySelector("[data-cancel]").onclick = m.close;
+    m.el.querySelector("form").onsubmit = async (event) => {
+      event.preventDefault();
+      const phone = normalizeContactPhone(new FormData(event.target).get("phone"));
+      if (!phone) {
+        toast("Vui lòng nhập số điện thoại hợp lệ.");
+        return;
+      }
+      const token = sessionStorage.getItem(TOKEN);
+      if (!token) {
+        toast("Phiên Admin chưa sẵn sàng để lưu cấu hình.");
+        return;
+      }
+      let response;
+      let data = {};
+      try {
+        response = await fetch("/api/admin/settings", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ phone }),
+        });
+        data = await response.json().catch(() => ({}));
+      } catch {
+        toast("Không thể kết nối máy chủ để lưu số điện thoại.");
+        return;
+      }
+      if (!response.ok) {
+        toast(data.error || "Không thể lưu số điện thoại.");
+        return;
+      }
+      contactPhone = normalizeContactPhone(data.value?.phone || phone) || phone;
+      m.close();
+      toast("Đã cập nhật số điện thoại gọi nhanh.");
+    };
+  }
   function serviceView() {
     const q =
         document.querySelector("#serviceSearch")?.value.toLowerCase() || "",
@@ -351,7 +409,7 @@
     const s = NhipBacStore.services.all(),
       r = NhipBacStore.reviews.all(),
       b = NhipBacStore.bookings.all();
-    return `<div class="admin-toolbar"><div><h2>Tổng quan</h2><p>Chào mừng trở lại.</p></div><button class="admin-btn" id="quickService">+ Thêm dịch vụ</button></div><div class="stat-grid"><div class="stat-card"><small>Tổng dịch vụ</small><strong>${s.length}</strong></div><div class="stat-card"><small>Tổng yêu cầu</small><strong>${b.length}</strong></div><div class="stat-card"><small>Yêu cầu mới</small><strong>${b.filter((x) => x.status === "new").length}</strong></div><div class="stat-card"><small>Đã xác nhận</small><strong>${b.filter((x) => x.status === "confirmed").length}</strong></div><div class="stat-card"><small>Tổng đánh giá</small><strong>${r.length}</strong></div><div class="stat-card"><small>Chờ duyệt</small><strong>${r.filter((x) => x.status === "pending").length}</strong></div></div><div class="panel"><h3>Yêu cầu đặt hẹn gần nhất</h3>${bookingView().match(/<table[\s\S]*<\/table>/)?.[0] || "<div class=empty>Chưa có booking.</div>"}</div>`;
+    return `<div class="admin-toolbar"><div><h2>Tổng quan</h2><p>Chào mừng trở lại.</p></div><div class="toolbar-actions"><button class="admin-btn secondary" id="editContactPhone">Số điện thoại</button><button class="admin-btn" id="quickService">+ Thêm dịch vụ</button></div></div><div class="stat-grid"><div class="stat-card"><small>Tổng dịch vụ</small><strong>${s.length}</strong></div><div class="stat-card"><small>Tổng yêu cầu</small><strong>${b.length}</strong></div><div class="stat-card"><small>Yêu cầu mới</small><strong>${b.filter((x) => x.status === "new").length}</strong></div><div class="stat-card"><small>Đã xác nhận</small><strong>${b.filter((x) => x.status === "confirmed").length}</strong></div><div class="stat-card"><small>Tổng đánh giá</small><strong>${r.length}</strong></div><div class="stat-card"><small>Chờ duyệt</small><strong>${r.filter((x) => x.status === "pending").length}</strong></div></div><div class="panel"><h3>Yêu cầu đặt hẹn gần nhất</h3>${bookingView().match(/<table[\s\S]*<\/table>/)?.[0] || "<div class=empty>Chưa có booking.</div>"}</div>`;
   }
   function bind(view) {
     document.querySelectorAll("[data-edit]").forEach(
@@ -434,6 +492,9 @@
     document
       .querySelector("#quickService")
       ?.addEventListener("click", () => openForm("service"));
+    document
+      .querySelector("#editContactPhone")
+      ?.addEventListener("click", openContactSettings);
     document.querySelector("#serviceSearch")?.addEventListener("input", () => {
       document.querySelector("#content").innerHTML = serviceView();
       bind("services");
@@ -540,5 +601,5 @@
   window.addEventListener("storage", () => {
     if (sessionStorage.getItem(SESSION)) render();
   });
-  (async () => { await hydrateRemoteBookings(); startBookingPolling(); render(); })();
+  (async () => { await hydrateRemoteBookings(); await hydrateRemoteSettings(); startBookingPolling(); render(); })();
 })();
