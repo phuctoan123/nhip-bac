@@ -76,7 +76,8 @@ module.exports = async function handler(req, res) {
   if (body === null) return res.status(400).json({ error: "JSON không hợp lệ." });
   const username = String(body.username || "");
   const password = String(body.password || "");
-  const configuredHash = process.env.ADMIN_PASSWORD_HASH;
+  const configuredHash = String(process.env.ADMIN_PASSWORD_HASH || "").trim().replace(/^(?:\"|')(.*)(?:\"|')$/, "$1");
+  const configuredUsername = String(process.env.ADMIN_USERNAME || "admin").trim() || "admin";
 
   if (!process.env.ADMIN_SESSION_SECRET || !configuredHash) return res.status(500).json({ error: "Admin auth chưa được cấu hình." });
   const hashedIp = ipHash(req);
@@ -91,7 +92,7 @@ module.exports = async function handler(req, res) {
     return res.status(503).json({ error: "Không thể kiểm tra giới hạn đăng nhập. Vui lòng thử lại sau." });
   }
 
-  const valid = username === (process.env.ADMIN_USERNAME || "admin") && verifyPassword(password, configuredHash);
+  const valid = username === configuredUsername && verifyPassword(password, configuredHash);
   if (!valid) {
     try {
       await recordFailedLogin(hashedIp);
