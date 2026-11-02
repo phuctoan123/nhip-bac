@@ -617,6 +617,8 @@ function initSocialDockSwipeVertical() {
 
 function bookingFormMarkup() {
   return `<form class="booking-form" id="bookingForm" data-booking-form>
+    <div class="booking-honeypot" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div>
+    <input name="formStartedAt" type="hidden" value="${Date.now()}" data-form-started-at>
     <label><span data-i18n data-vi="Họ tên" data-en="Full name">Họ tên</span><input name="name" type="text" required autocomplete="name" placeholder="Họ và tên" data-placeholder-vi="Họ và tên" data-placeholder-en="Your name" /></label>
     <label><span data-i18n data-vi="Số điện thoại" data-en="Phone">Số điện thoại</span><input name="phone" type="tel" required autocomplete="tel" inputmode="tel" placeholder="09xx xxx xxx" data-placeholder-vi="09xx xxx xxx" data-placeholder-en="09xx xxx xxx" /></label>
     <label><span data-i18n data-vi="Dịch vụ" data-en="Service">Dịch vụ</span><select name="service" id="bookingService"></select></label>
@@ -801,11 +803,11 @@ async function saveBooking(record) {
     });
     const data = await response.json().catch(() => ({}));
     if (response.ok) return { ok: true, data };
-    return { ok: false, error: data.error || "Không thể lưu yêu cầu đặt lịch." };
+    return { ok: false, status: response.status, rateLimited: response.status === 429, error: data.error || "Không thể lưu yêu cầu đặt lịch." };
   } catch (error) {
     const localPreview = ["localhost", "127.0.0.1"].includes(window.location.hostname) || window.location.protocol === "file:";
     if (localPreview) return { ok: NhipBacStore.bookings.add(record), local: true };
-    return { ok: false, error: "Không thể kết nối đến máy chủ. Vui lòng thử lại sau." };
+    return { ok: false, status: 0, error: "Không thể kết nối đến máy chủ. Vui lòng thử lại sau." };
   }
 }
 
@@ -857,7 +859,7 @@ async function initPublicData() {
   }
   const form=document.getElementById("bookingForm");
   if(form) {
-    const onSubmit = async e=>{e.preventDefault();if(form.dataset.submitting==="true")return;const f=new FormData(form), name=String(f.get("name")||"").trim(),phone=String(f.get("phone")||"").trim(),sid=String(f.get("service")||""),service=services.find(s=>s.id===sid),message=form.querySelector("#bookingMessage");if(!name||!phone){message.textContent="Vui lòng nhập họ tên và số điện thoại.";message.style.color="#b94a43";return}form.dataset.submitting="true";setBookingLoading(form,true);const record={customerName:name,phone,serviceId:sid,serviceNameSnapshot:service?.nameVi||"Dịch vụ không xác định",preferredDate:f.get("date")||"",preferredTime:f.get("time")||"",message:f.get("note")||""};const result=await saveBooking(record);message.textContent=result.ok?"Đã ghi nhận yêu cầu. Nhíp Bạc sẽ liên hệ để xác nhận lịch.":result.error;message.style.color=result.ok?"#287344":"#b94a43";if(result.ok){form.reset();showBookingSuccess({...record,id:result.data?.booking?.id||NhipBacStore.id("booking"),bookingCode:result.data?.booking?.bookingCode});}setBookingLoading(form,false);setTimeout(()=>form.dataset.submitting="false",700)};
+    const onSubmit = async e=>{e.preventDefault();if(form.dataset.submitting==="true")return;const f=new FormData(form), name=String(f.get("name")||"").trim(),phone=String(f.get("phone")||"").trim(),sid=String(f.get("service")||""),service=services.find(s=>s.id===sid),message=form.querySelector("#bookingMessage");if(!name||!phone){message.textContent="Vui lòng nhập họ tên và số điện thoại.";message.style.color="#b94a43";return}form.dataset.submitting="true";setBookingLoading(form,true);const record={customerName:name,phone,serviceId:sid,serviceNameSnapshot:service?.nameVi||"Dịch vụ không xác định",preferredDate:f.get("date")||"",preferredTime:f.get("time")||"",message:f.get("note")||"",website:String(f.get("website")||""),formStartedAt:Number(f.get("formStartedAt"))};const result=await saveBooking(record);message.textContent=result.ok?"Đã ghi nhận yêu cầu. Nhíp Bạc sẽ liên hệ để xác nhận lịch.":result.rateLimited?`${result.error} Nếu cần gấp, vui lòng gọi hoặc chat Zalo trực tiếp với Nhíp Bạc.`:result.error;message.style.color=result.ok?"#287344":"#b94a43";if(result.ok){form.reset();showBookingSuccess({...record,id:result.data?.booking?.id||NhipBacStore.id("booking"),bookingCode:result.data?.booking?.bookingCode});}setBookingLoading(form,false);setTimeout(()=>form.dataset.submitting="false",700)};
     form.addEventListener("submit", onSubmit);
     registerPageCleanup(() => form.removeEventListener("submit", onSubmit));
   }
