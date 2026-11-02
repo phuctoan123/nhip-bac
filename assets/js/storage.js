@@ -5,6 +5,11 @@
     reviews: "nhipbac.reviews.v1",
     bookings: "nhipbac.bookings.v1",
   };
+  const isLocalPreview = ["localhost", "127.0.0.1"].includes(window.location.hostname) || window.location.protocol === "file:";
+  const memory = {};
+  const remoteFallback = { services: isLocalPreview, reviews: isLocalPreview };
+  const legacyReviewIds = new Set(["review-1", "review-2", "review-3", "review-4", "review-5", "review-6"]);
+  const removeLegacyReviews = (items) => items.filter((item) => !(legacyReviewIds.has(item.id) && item.reviewDate === "2024-01-01"));
   const now = () => new Date().toISOString();
   const id = (prefix) =>
     `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
@@ -46,27 +51,8 @@
       updatedAt: now(),
     },
   ];
-  const initialReviews = [
-    [
-      "Ngọc Hà",
-      "Nhân viên nhẹ tay, thao tác kỹ. Không gian riêng tư nên mình rất thoải mái.",
-    ],
-    ["Phương Linh", "Dịch vụ đúng giờ, giá rõ ràng. Mình sẽ quay lại khi cần."],
-    ["Hữu Đức", "Kết quả tự nhiên, không phải nhuộm nên rất hợp với mình."],
-    ["Bảo Trân", "Chat Zalo xác nhận nhanh, địa chỉ dễ tìm ở Phú Mỹ Hưng."],
-    ["Minh Quân", "Mình thích nhất là cảm giác sạch sẽ và chu đáo."],
-    ["Diễm My", "Nhổ tóc bạc rất tỉ mỉ, sau đó nhìn tóc gọn hơn hẳn."],
-  ].map((x, i) => ({
-    id: `review-${i + 1}`,
-    name: x[0],
-    content: x[1],
-    rating: 5,
-    language: "vi",
-    reviewDate: "2024-01-01",
-    status: "published",
-    createdAt: now(),
-    updatedAt: now(),
-  }));
+  // Review mẫu đã được gỡ; production chỉ nhận review đã xuất bản từ Supabase.
+  const initialReviews = [];
   function read(key, fallback) {
     try {
       const raw = localStorage.getItem(key);
@@ -93,36 +79,93 @@
       return false;
     }
   }
-  function repo(key, fallback) {
+  function repo(key, fallback, kind) {
+    const current = () => {
+      const items = Array.isArray(memory[kind]) ? memory[kind] : read(key, fallback);
+      return kind === "reviews" ? removeLegacyReviews(items) : items;
+    };
+    const save = (items) => {
+      memory[kind] = Array.isArray(items) ? items : [];
+      if (isLocalPreview || remoteFallback[kind]) return write(key, memory[kind]);
+      window.dispatchEvent(new CustomEvent("nhipbac:data-updated", { detail: { key } }));
+      return true;
+    };
     return {
-      all: () => read(key, fallback),
-      save: (items) => write(key, items),
+      all: current,
+      save,
       add(item) {
-        const a = read(key, fallback);
+        const a = current();
         a.push(item);
-        return write(key, a);
+        return save(a);
       },
       update(item) {
-        const a = read(key, fallback);
+        const a = current();
         const i = a.findIndex((x) => x.id === item.id);
         if (i < 0) return false;
         a[i] = { ...a[i], ...item, updatedAt: now() };
-        return write(key, a);
+        return save(a);
       },
       remove(id) {
-        return write(
-          key,
-          read(key, fallback).filter((x) => x.id !== id),
-        );
+        return save(current().filter((x) => x.id !== id));
       },
     };
   }
+
+  const fromServiceApi = (x) => ({
+    id: x.id,
+    nameVi: x.name_vi || "",
+    nameEn: x.name_en || "",
+    descriptionVi: x.description_vi || "",
+    descriptionEn: x.description_en || "",
+    category: x.category || "",
+    image: x.image || "",
+    price: Number(x.price) || 0,
+    unit: x.unit || "phút",
+    priceNote: x.price_note || "",
+    visible: x.visible === true,
+    sortOrder: Number(x.sort_order) || 0,
+    createdAt: x.created_at || now(),
+    updatedAt: x.updated_at || now(),
+  });
+  const fromReviewApi = (x) => ({
+    id: x.id,
+    name: x.name || "",
+    content: x.content || "",
+    rating: Number(x.rating) || 5,
+    language: x.language === "en" ? "en" : "vi",
+    reviewDate: x.review_date || "",
+    status: x.status || "pending",
+    createdAt: x.created_at || now(),
+    updatedAt: x.updated_at || now(),
+  });
+  async function hydrateRemote(kind, endpoint, mapper, fallback) {
+    if (isLocalPreview) return;
+    try {
+      const response = await fetch(endpoint, { cache: "no-store" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      if (!Array.isArray(data)) throw new Error("Invalid API payload");
+      memory[kind] = data.map(mapper);
+      remoteFallback[kind] = false;
+    } catch (error) {
+      remoteFallback[kind] = true;
+      memory[kind] = kind === "reviews" ? removeLegacyReviews(read(KEYS[kind], fallback)) : read(KEYS[kind], fallback);
+      console.warn(`Nhíp Bạc ${kind} API unavailable; using local fallback`, error);
+    }
+  }
+  const ready = Promise.all([
+    hydrateRemote("services", "/api/services", fromServiceApi, initialServices),
+    hydrateRemote("reviews", "/api/reviews", fromReviewApi, initialReviews),
+  ]);
   window.NhipBacStore = {
     KEYS,
     now,
     id,
-    services: repo(KEYS.services, initialServices),
-    reviews: repo(KEYS.reviews, initialReviews),
-    bookings: repo(KEYS.bookings, []),
+    isLocalPreview,
+    ready,
+    remote: { services: { fromApi: fromServiceApi }, reviews: { fromApi: fromReviewApi } },
+    services: repo(KEYS.services, initialServices, "services"),
+    reviews: repo(KEYS.reviews, initialReviews, "reviews"),
+    bookings: repo(KEYS.bookings, [], "bookings"),
   };
 })();

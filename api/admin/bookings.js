@@ -1,15 +1,5 @@
-const crypto = require("crypto");
 const { supabaseRequest } = require("../_lib/supabase");
-
-function verifyToken(req) {
-  const token = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "");
-  const [payload, signature] = token.split(".");
-  if (!payload || !signature || !process.env.ADMIN_SESSION_SECRET) return false;
-  const expected = crypto.createHmac("sha256", process.env.ADMIN_SESSION_SECRET).update(payload).digest("base64url");
-  if (signature.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return false;
-  const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-  return data.exp > Date.now();
-}
+const { verifyToken } = require("../_lib/auth");
 
 const json = (res, status, data) => res.status(status).json(data);
 
@@ -23,7 +13,12 @@ module.exports = async function handler(req, res) {
       return json(res, 200, result.data);
     }
 
-    const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
+    let body;
+    try {
+      body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
+    } catch {
+      return json(res, 400, { error: "JSON không hợp lệ." });
+    }
     const id = String(body.id || req.query?.id || "");
     if (!id) return json(res, 400, { error: "Thiếu booking id." });
 

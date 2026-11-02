@@ -1,19 +1,5 @@
-const crypto = require("crypto");
 const { supabaseRequest } = require("../_lib/supabase");
-
-function verifyToken(req) {
-  const token = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "");
-  const [payload, signature] = token.split(".");
-  if (!payload || !signature || !process.env.ADMIN_SESSION_SECRET) return false;
-  try {
-    const expected = crypto.createHmac("sha256", process.env.ADMIN_SESSION_SECRET).update(payload).digest("base64url");
-    if (signature.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return false;
-    const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-    return data.exp > Date.now();
-  } catch {
-    return false;
-  }
-}
+const { verifyToken } = require("../_lib/auth");
 
 function json(res, status, data) {
   res.status(status).setHeader("Content-Type", "application/json");
@@ -47,7 +33,12 @@ module.exports = async function handler(req, res) {
     }
 
     if (req.method !== "PATCH") return json(res, 405, { error: "Method not allowed" });
-    const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
+    let body;
+    try {
+      body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
+    } catch {
+      return json(res, 400, { error: "JSON không hợp lệ." });
+    }
     const phones = cleanPhones(body.phones);
     if (!phones || phones.length !== 2) return json(res, 400, { error: "Vui lòng nhập đủ hai số điện thoại hợp lệ." });
 

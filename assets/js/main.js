@@ -826,8 +826,13 @@ function setBookingLoading(form, loading) {
   }
 }
 
-function initPublicData() {
+let publicDataGeneration = 0;
+
+async function initPublicData() {
   if (!window.NhipBacStore) return;
+  const generation = ++publicDataGeneration;
+  await NhipBacStore.ready?.catch(() => {});
+  if (generation !== publicDataGeneration) return;
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   const money = (n) => n ? `${new Intl.NumberFormat("vi-VN").format(n)} VND` : "Liên hệ";
   const services = NhipBacStore.services.all().filter(s => s.visible).sort((a,b) => a.sortOrder-b.sortOrder);

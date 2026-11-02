@@ -30,6 +30,7 @@
           timeStyle: "short",
         })
       : "—";
+  let remoteContentError = "";
   const toast = (m) => {
     const e = document.createElement("div");
     e.className = "toast";
@@ -77,6 +78,57 @@
       NhipBacStore.bookings.save(rows.map(x => ({ id: x.id, bookingCode: x.booking_code || "", customerName: x.customer_name, phone: x.phone, serviceId: x.service_id || "", serviceNameSnapshot: x.service_name_snapshot, preferredDate: x.preferred_date || "", preferredTime: x.preferred_time || "", message: x.message || "", createdAt: x.created_at, status: x.status, adminNote: x.admin_note || "", updatedAt: x.updated_at })));
       return true;
     } catch (error) { remoteBookingError = "Không thể kết nối tới API booking của Vercel."; return false; }
+  }
+  const serviceFromApi = (row) => NhipBacStore.remote.services.fromApi(row);
+  const reviewFromApi = (row) => NhipBacStore.remote.reviews.fromApi(row);
+  const useRemoteContent = () => !isLocalPreview && Boolean(sessionStorage.getItem(TOKEN));
+  async function hydrateRemoteContent() {
+    const token = sessionStorage.getItem(TOKEN);
+    if (!token) return false;
+    let loaded = true;
+    for (const kind of ["services", "reviews"]) {
+      try {
+        const response = await fetch(`/api/admin/${kind}`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
+        const payload = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          sessionStorage.removeItem(SESSION);
+          sessionStorage.removeItem(TOKEN);
+          remoteContentError = "Phiên Admin đã hết hạn. Vui lòng đăng nhập lại.";
+          return false;
+        }
+        if (!response.ok || !Array.isArray(payload)) {
+          loaded = false;
+          remoteContentError = payload.error || `Không thể tải ${kind === "services" ? "dịch vụ" : "đánh giá"} từ database.`;
+          continue;
+        }
+        NhipBacStore[kind].save(payload.map(kind === "services" ? serviceFromApi : reviewFromApi));
+      } catch {
+        loaded = false;
+        remoteContentError = `Không thể kết nối API ${kind === "services" ? "dịch vụ" : "đánh giá"}.`;
+      }
+    }
+    if (loaded) remoteContentError = "";
+    return loaded;
+  }
+  async function remoteContentMutation(kind, method, body) {
+    if (!useRemoteContent()) return { ok: true, data: null };
+    const id = body?.id;
+    const query = method === "POST" || !id ? "" : `?id=${encodeURIComponent(id)}`;
+    try {
+      const response = await fetch(`/api/admin/${kind}${query}`, {
+        method,
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionStorage.getItem(TOKEN)}` },
+        body: method === "DELETE" ? undefined : JSON.stringify(body),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        sessionStorage.removeItem(SESSION);
+        sessionStorage.removeItem(TOKEN);
+      }
+      return { ok: response.ok, data, error: data.error || `Không thể cập nhật ${kind === "services" ? "dịch vụ" : "đánh giá"}.` };
+    } catch {
+      return { ok: false, data: {}, error: "Không thể kết nối tới API quản trị." };
+    }
   }
   function normalizeContactPhone(value) {
     const phone = String(value || "").trim().replace(/[^0-9+().\-\s]/g, "");
@@ -190,6 +242,7 @@
       location.hash = "#dashboard";
       await hydrateRemoteBookings();
       await hydrateRemoteSettings();
+      await hydrateRemoteContent();
       startBookingPolling();
       render();
     } else err.textContent = "Tên đăng nhập hoặc mật khẩu không đúng.";
@@ -297,7 +350,7 @@
       kind === "service" ? serviceForm(item) : reviewsForm(item),
     );
     m.el.querySelector("[data-cancel]").onclick = m.close;
-    m.el.querySelector("form").onsubmit = (e) => {
+    m.el.querySelector("form").onsubmit = async (e) => {
       e.preventDefault();
       const f = new FormData(e.target),
         data = Object.fromEntries(f);
@@ -309,23 +362,59 @@
         data.price = Number(data.price);
         data.sortOrder = Number(data.sortOrder) || 1;
         data.visible = data.visible === "true";
-        data.createdAt = item?.createdAt || new Date().toISOString();
-        item
-          ? NhipBacStore.services.update({ ...item, ...data })
-          : NhipBacStore.services.add(data);
+        if (useRemoteContent()) {
+          const remote = await remoteContentMutation("services", item ? "PATCH" : "POST", {
+            ...data,
+            ...(item ? { id: item.id } : {}),
+            name_vi: data.nameVi,
+            name_en: data.nameEn,
+            description_vi: data.descriptionVi,
+            description_en: data.descriptionEn,
+            price_note: data.priceNote,
+            sort_order: data.sortOrder,
+          });
+          if (!remote.ok) return toast(remote.error);
+          const saved = remote.data?.id ? serviceFromApi(remote.data) : null;
+          if (saved) {
+            const items = NhipBacStore.services.all();
+            const index = items.findIndex((x) => x.id === saved.id);
+            if (index >= 0) items[index] = saved;
+            else items.push(saved);
+            NhipBacStore.services.save(items);
+          }
+        } else {
+          data.createdAt = item?.createdAt || new Date().toISOString();
+          item
+            ? NhipBacStore.services.update({ ...item, ...data })
+            : NhipBacStore.services.add({ id: data.id || NhipBacStore.id("service"), ...data });
+        }
       } else {
         if (!data.name || !data.content) {
           toast("Vui lòng nhập tên và nội dung");
           return;
         }
         data.rating = Number(data.rating);
-        data.createdAt = item?.createdAt || new Date().toISOString();
-        item
-          ? NhipBacStore.reviews.update({ ...item, ...data })
-          : NhipBacStore.reviews.add({
-              id: NhipBacStore.id("review"),
-              ...data,
-            });
+        if (useRemoteContent()) {
+          const remote = await remoteContentMutation("reviews", item ? "PATCH" : "POST", {
+            ...data,
+            ...(item ? { id: item.id } : {}),
+            review_date: data.reviewDate,
+          });
+          if (!remote.ok) return toast(remote.error);
+          const saved = remote.data?.id ? reviewFromApi(remote.data) : null;
+          if (saved) {
+            const items = NhipBacStore.reviews.all();
+            const index = items.findIndex((x) => x.id === saved.id);
+            if (index >= 0) items[index] = saved;
+            else items.push(saved);
+            NhipBacStore.reviews.save(items);
+          }
+        } else {
+          data.createdAt = item?.createdAt || new Date().toISOString();
+          item
+            ? NhipBacStore.reviews.update({ ...item, ...data })
+            : NhipBacStore.reviews.add({ id: NhipBacStore.id("review"), ...data });
+        }
       }
       m.close();
       toast("Đã lưu thành công");
@@ -389,11 +478,11 @@
           (filter === "all" || String(x.visible) === filter),
       )
       .sort((x, y) => (x.sortOrder || 0) - (y.sortOrder || 0));
-    return `<div class="admin-toolbar"><div><h2>Dịch vụ & giá cả</h2><p>Quản lý nguồn dữ liệu dùng chung cho services.html và pricing.html.</p></div><button class="admin-btn" id="addService">+ Thêm dịch vụ</button></div><div class="panel"><div class="filters"><input id="serviceSearch" placeholder="Tìm theo tên…" value="${esc(q)}"><select id="serviceFilter"><option value="all">Tất cả trạng thái</option><option value="true" ${filter === "true" ? "selected" : ""}>Đang hiển thị</option><option value="false" ${filter === "false" ? "selected" : ""}>Đang ẩn</option></select></div><table class="data-table"><thead><tr><th>ID</th><th>Dịch vụ</th><th>Giá</th><th>Trạng thái</th><th>Cập nhật</th><th>Thao tác</th></tr></thead><tbody>${a.length ? a.map((x) => `<tr><td><code>${esc(x.id)}</code></td><td><strong>${esc(x.nameVi)}</strong><br><small>${esc(x.category)}</small></td><td>${money(x.price)} / ${esc(x.unit)}<br><small>${esc(x.priceNote)}</small></td><td><span class="status ${x.visible ? "published" : "hidden"}">${x.visible ? "Hiển thị" : "Đã ẩn"}</span></td><td>${fmt(x.updatedAt)}</td><td><div class="table-actions"><button class="icon-btn" data-edit="${esc(x.id)}">Sửa</button><button class="icon-btn" data-toggle="${esc(x.id)}">${x.visible ? "Ẩn" : "Hiện"}</button><button class="icon-btn" data-delete="${esc(x.id)}">Xóa</button></div></td></tr>`).join("") : "<tr><td colspan=6 class=empty>Chưa có dịch vụ nào.</td></tr>"}</tbody></table></div>`;
+    return `<div class="admin-toolbar"><div><h2>Dịch vụ & giá cả</h2><p>${remoteContentError ? `<strong class="form-error">${esc(remoteContentError)}</strong>` : "Quản lý nguồn dữ liệu dùng chung cho services.html và pricing.html."}</p></div><button class="admin-btn" id="addService">+ Thêm dịch vụ</button></div><div class="panel"><div class="filters"><input id="serviceSearch" placeholder="Tìm theo tên…" value="${esc(q)}"><select id="serviceFilter"><option value="all">Tất cả trạng thái</option><option value="true" ${filter === "true" ? "selected" : ""}>Đang hiển thị</option><option value="false" ${filter === "false" ? "selected" : ""}>Đang ẩn</option></select></div><table class="data-table"><thead><tr><th>ID</th><th>Dịch vụ</th><th>Giá</th><th>Trạng thái</th><th>Cập nhật</th><th>Thao tác</th></tr></thead><tbody>${a.length ? a.map((x) => `<tr><td><code>${esc(x.id)}</code></td><td><strong>${esc(x.nameVi)}</strong><br><small>${esc(x.category)}</small></td><td>${money(x.price)} / ${esc(x.unit)}<br><small>${esc(x.priceNote)}</small></td><td><span class="status ${x.visible ? "published" : "hidden"}">${x.visible ? "Hiển thị" : "Đã ẩn"}</span></td><td>${fmt(x.updatedAt)}</td><td><div class="table-actions"><button class="icon-btn" data-edit="${esc(x.id)}">Sửa</button><button class="icon-btn" data-toggle="${esc(x.id)}">${x.visible ? "Ẩn" : "Hiện"}</button><button class="icon-btn" data-delete="${esc(x.id)}">Xóa</button></div></td></tr>`).join("") : "<tr><td colspan=6 class=empty>Chưa có dịch vụ nào.</td></tr>"}</tbody></table></div>`;
   }
   function reviewView() {
     const a = NhipBacStore.reviews.all();
-    return `<div class="admin-toolbar"><div><h2>Đánh giá khách hàng</h2><p>Chỉ đánh giá “Đã xuất bản” được hiển thị công khai.</p></div><button class="admin-btn" id="addReview">+ Thêm đánh giá</button></div><div class="panel"><table class="data-table"><thead><tr><th>Người đánh giá</th><th>Nội dung</th><th>Điểm</th><th>Ngày</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>${a.length ? a.map((x) => `<tr><td><strong>${esc(x.name)}</strong><br><small>${x.language.toUpperCase()}</small></td><td>${esc(x.content)}</td><td>${"★".repeat(x.rating)}</td><td>${esc(x.reviewDate)}</td><td><span class="status ${x.status}">${{ draft: "Bản nháp", pending: "Chờ duyệt", published: "Đã xuất bản", hidden: "Đã ẩn" }[x.status]}</span></td><td><div class="table-actions"><button class="icon-btn" data-edit-review="${x.id}">Sửa</button><button class="icon-btn" data-delete-review="${x.id}">Xóa</button></div></td></tr>`).join("") : "<tr><td colspan=6 class=empty>Chưa có đánh giá.</td></tr>"}</tbody></table></div>`;
+    return `<div class="admin-toolbar"><div><h2>Đánh giá khách hàng</h2><p>${remoteContentError ? `<strong class="form-error">${esc(remoteContentError)}</strong>` : "Chỉ đánh giá “Đã xuất bản” được hiển thị công khai."}</p></div><button class="admin-btn" id="addReview">+ Thêm đánh giá</button></div><div class="panel"><table class="data-table"><thead><tr><th>Người đánh giá</th><th>Nội dung</th><th>Điểm</th><th>Ngày</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>${a.length ? a.map((x) => `<tr><td><strong>${esc(x.name)}</strong><br><small>${x.language.toUpperCase()}</small></td><td>${esc(x.content)}</td><td>${"★".repeat(x.rating)}</td><td>${esc(x.reviewDate)}</td><td><span class="status ${x.status}">${{ draft: "Bản nháp", pending: "Chờ duyệt", published: "Đã xuất bản", hidden: "Đã ẩn" }[x.status]}</span></td><td><div class="table-actions"><button class="icon-btn" data-edit-review="${x.id}">Sửa</button><button class="icon-btn" data-delete-review="${x.id}">Xóa</button></div></td></tr>`).join("") : "<tr><td colspan=6 class=empty>Chưa có đánh giá.</td></tr>"}</tbody></table></div>`;
   }
   function bookingView() {
     let a = NhipBacStore.bookings
@@ -440,18 +529,29 @@
     );
     document.querySelectorAll("[data-toggle]").forEach(
       (b) =>
-        (b.onclick = () => {
+        (b.onclick = async () => {
           const x = NhipBacStore.services
             .all()
             .find((x) => x.id === b.dataset.toggle);
-          NhipBacStore.services.update({ ...x, visible: !x.visible });
+          if (!x) return;
+          const visible = !x.visible;
+          const remote = await remoteContentMutation("services", "PATCH", { id: x.id, visible });
+          if (!remote.ok) return toast(remote.error);
+          if (useRemoteContent() && remote.data?.id) {
+            const saved = serviceFromApi(remote.data);
+            NhipBacStore.services.save(NhipBacStore.services.all().map((item) => item.id === saved.id ? saved : item));
+          } else {
+            NhipBacStore.services.update({ ...x, visible });
+          }
           render("services");
         }),
     );
     document.querySelectorAll("[data-delete]").forEach(
       (b) =>
-        (b.onclick = () => {
+        (b.onclick = async () => {
           if (confirm("Xóa dịch vụ này?")) {
+            const remote = await remoteContentMutation("services", "DELETE", { id: b.dataset.delete });
+            if (!remote.ok) return toast(remote.error);
             NhipBacStore.services.remove(b.dataset.delete);
             render("services");
           }
@@ -475,8 +575,10 @@
     );
     document.querySelectorAll("[data-delete-review]").forEach(
       (b) =>
-        (b.onclick = () => {
+        (b.onclick = async () => {
           if (confirm("Xóa đánh giá này?")) {
+            const remote = await remoteContentMutation("reviews", "DELETE", { id: b.dataset.deleteReview });
+            if (!remote.ok) return toast(remote.error);
             NhipBacStore.reviews.remove(b.dataset.deleteReview);
             render("reviews");
           }
@@ -619,5 +721,5 @@
   window.addEventListener("storage", () => {
     if (sessionStorage.getItem(SESSION)) render();
   });
-  (async () => { await hydrateRemoteBookings(); await hydrateRemoteSettings(); startBookingPolling(); render(); })();
+  (async () => { await hydrateRemoteBookings(); await hydrateRemoteSettings(); await hydrateRemoteContent(); startBookingPolling(); render(); })();
 })();
