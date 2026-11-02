@@ -1,5 +1,6 @@
 const { supabaseRequest } = require("../_lib/supabase");
 const { verifyToken } = require("../_lib/auth");
+const ALLOWED_STATUSES = new Set(["new", "processing", "confirmed", "completed", "cancelled"]);
 
 const json = (res, status, data) => res.status(status).json(data);
 
@@ -24,8 +25,12 @@ module.exports = async function handler(req, res) {
 
     if (req.method === "PATCH") {
       const update = {};
-      if (body.status) update.status = body.status;
+      if (body.status !== undefined) {
+        if (!ALLOWED_STATUSES.has(body.status)) return json(res, 400, { error: "Trạng thái booking không hợp lệ." });
+        update.status = body.status;
+      }
       if (body.adminNote !== undefined) update.admin_note = String(body.adminNote).slice(0, 2000);
+      if (!Object.keys(update).length) return json(res, 400, { error: "Không có dữ liệu cần cập nhật." });
       const result = await supabaseRequest(`bookings?id=eq.${encodeURIComponent(id)}`, { method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify(update) });
       if (!result.response.ok) return json(res, 502, { error: "Không thể cập nhật booking." });
       return json(res, 200, result.data?.[0] || null);

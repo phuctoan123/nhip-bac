@@ -1,8 +1,9 @@
 (function () {
-  const SESSION = "nhipbac.admin.session.v1",
-    HASH = "9a4aabf0e5cf71cae2cea646613ce7e2a5919fa758e56819704be25a3a2c1f0b";
-  const config = { username: "admin", passwordHash: HASH }; // Local fallback only. Production auth uses /api/admin/auth.
+  const SESSION = "nhipbac.admin.session.v1";
   const TOKEN = "nhipbac.admin.token.v1";
+  const isLocalPreview = ["localhost", "127.0.0.1"].includes(window.location.hostname) || window.location.protocol === "file:";
+  // Chỉ dùng khi mở local để kiểm tra giao diện; production luôn xác thực qua API.
+  const config = isLocalPreview ? { username: "admin", passwordHash: "9a4aabf0e5cf71cae2cea646613ce7e2a5919fa758e56819704be25a3a2c1f0b" } : null;
   let remoteBookingError = "";
   let contactPhones = [
     { id: "dung", label: "Ms. Dung", number: "0934013486" },
@@ -56,7 +57,6 @@
     } catch (error) { /* local development can use the fallback credentials */ }
     return { error: "Không thể kết nối tới Auth API." };
   }
-  const isLocalPreview = ["localhost", "127.0.0.1"].includes(window.location.hostname) || window.location.protocol === "file:";
   async function hydrateRemoteBookings() {
     const token = sessionStorage.getItem(TOKEN);
     if (!token) return false;
@@ -231,7 +231,7 @@
     err.textContent = "Đang kiểm tra…";
     const remoteResult = await authenticateRemote(f.get("username"), f.get("password"));
     const remoteToken = remoteResult.token;
-    const localValid = f.get("username") === config.username && (await sha(f.get("password"))) === config.passwordHash;
+    const localValid = isLocalPreview && config && f.get("username") === config.username && (await sha(f.get("password"))) === config.passwordHash;
     if (!isLocalPreview && !remoteToken) {
       err.textContent = remoteResult.error || "Không thể xác thực Admin production.";
       return;
