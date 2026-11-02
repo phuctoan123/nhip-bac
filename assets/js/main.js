@@ -861,6 +861,7 @@ function initPublicData() {
 function initPublicPage() {
   cleanupPublicPage();
   initLanguage();
+  document.querySelectorAll("[data-year]").forEach(n => { n.textContent = new Date().getFullYear(); });
   initBookingComponent();
   initActiveNav();
   initContactPhone();
