@@ -42,6 +42,10 @@ function setLanguage(lang) {
     if (src) img.src = src;
   });
 
+  document.querySelectorAll("[data-placeholder-vi][data-placeholder-en]").forEach((field) => {
+    field.placeholder = activeLang === "en" ? field.dataset.placeholderEn : field.dataset.placeholderVi;
+  });
+
   // Update active button state
   document.querySelectorAll(".lang-btn").forEach((button) => {
     button.classList.remove("is-active");
@@ -611,6 +615,93 @@ function initSocialDockSwipeVertical() {
   dock.classList.add('show');
 }
 
+function bookingFormMarkup() {
+  return `<form class="booking-form" id="bookingForm" data-booking-form>
+    <label><span data-i18n data-vi="Họ tên" data-en="Full name">Họ tên</span><input name="name" type="text" required autocomplete="name" placeholder="Họ và tên" data-placeholder-vi="Họ và tên" data-placeholder-en="Your name" /></label>
+    <label><span data-i18n data-vi="Số điện thoại" data-en="Phone">Số điện thoại</span><input name="phone" type="tel" required autocomplete="tel" inputmode="tel" placeholder="09xx xxx xxx" data-placeholder-vi="09xx xxx xxx" data-placeholder-en="09xx xxx xxx" /></label>
+    <label><span data-i18n data-vi="Dịch vụ" data-en="Service">Dịch vụ</span><select name="service" id="bookingService"></select></label>
+    <div class="calendar-field">
+      <span class="field-label" data-i18n data-vi="Ngày mong muốn" data-en="Preferred date">Ngày mong muốn</span>
+      <input name="date" id="bookingDate" type="hidden" required />
+      <button type="button" class="calendar-trigger" id="calendarTrigger" aria-expanded="false" aria-controls="bookingCalendar" data-i18n data-vi="Chọn ngày đến" data-en="Select date">Chọn ngày đến</button>
+      <div class="booking-calendar" id="bookingCalendar" aria-label="Chọn ngày đặt lịch"></div>
+    </div>
+    <label><span data-i18n data-vi="Giờ mong muốn" data-en="Preferred time">Giờ mong muốn</span><input name="time" type="text" placeholder="Thứ Bảy, 14:00" data-placeholder-vi="Thứ Bảy, 14:00" data-placeholder-en="Saturday, 2:00 PM" /></label>
+    <label><span data-i18n data-vi="Ghi chú" data-en="Note">Ghi chú</span><textarea name="note" rows="4" placeholder="Tôi muốn đặt lịch..." data-placeholder-vi="Tôi muốn đặt lịch..." data-placeholder-en="I would like to book..."></textarea></label>
+    <button class="btn btn-primary" type="submit" data-i18n data-vi="Đặt lịch" data-en="Book">Đặt lịch</button>
+    <p id="bookingMessage" role="status" aria-live="polite"></p>
+  </form>`;
+}
+
+function initBookingComponent() {
+  const host = document.querySelector("[data-booking-component]");
+  const triggers = [...document.querySelectorAll("[data-booking-open]")];
+  if (!host && !triggers.length) return;
+
+  let modal = null;
+  let lastTrigger = null;
+  const listeners = [];
+  const addListener = (node, event, handler, options) => {
+    node.addEventListener(event, handler, options);
+    listeners.push(() => node.removeEventListener(event, handler, options));
+  };
+
+  if (host) {
+    host.innerHTML = bookingFormMarkup();
+  } else {
+    modal = document.createElement("div");
+    modal.className = "booking-modal";
+    modal.hidden = true;
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    modal.setAttribute("aria-labelledby", "bookingModalTitle");
+    modal.innerHTML = `<div class="booking-modal-card">
+      <div class="booking-modal-header">
+        <div><p class="eyebrow" data-i18n data-vi="Nhíp Bạc - Phú Mỹ Hưng" data-en="Nhip Bac at Phu My Hung">Nhíp Bạc - Phú Mỹ Hưng</p><h2 id="bookingModalTitle" data-i18n data-vi="Đặt lịch / Booking" data-en="Book an appointment">Đặt lịch / Booking</h2></div>
+        <button type="button" class="booking-modal-close" data-booking-close aria-label="Đóng form đặt lịch">×</button>
+      </div>
+      <p class="booking-modal-intro" data-i18n data-vi="Chọn thời gian phù hợp, Nhíp Bạc sẽ liên hệ để xác nhận lịch hẹn của bạn." data-en="Choose a convenient time and Nhip Bac will contact you to confirm your appointment.">Chọn thời gian phù hợp, Nhíp Bạc sẽ liên hệ để xác nhận lịch hẹn của bạn.</p>
+      ${bookingFormMarkup()}
+    </div>`;
+    document.body.appendChild(modal);
+  }
+
+  const form = document.getElementById("bookingForm");
+  if (!form) return;
+
+  const closeModal = () => {
+    if (!modal) return;
+    modal.classList.remove("is-open");
+    modal.hidden = true;
+    document.body.classList.remove("booking-modal-open");
+    lastTrigger?.focus();
+  };
+  const openModal = (event) => {
+    if (!modal) return;
+    event?.preventDefault();
+    lastTrigger = event?.currentTarget || triggers[0];
+    modal.hidden = false;
+    requestAnimationFrame(() => modal.classList.add("is-open"));
+    document.body.classList.add("booking-modal-open");
+    window.setTimeout(() => form.elements.name?.focus(), 80);
+  };
+
+  triggers.forEach((trigger) => addListener(trigger, "click", openModal));
+  if (modal) {
+    addListener(modal.querySelector("[data-booking-close]"), "click", closeModal);
+    addListener(modal, "click", (event) => { if (event.target === modal) closeModal(); });
+    addListener(document, "keydown", (event) => { if (event.key === "Escape" && !modal.hidden) closeModal(); });
+  }
+
+  // Dynamic markup is created after the initial language pass.
+  setLanguage(document.documentElement.lang || "vi");
+  registerPageCleanup(() => {
+    listeners.forEach((cleanup) => cleanup());
+    document.body.classList.remove("booking-modal-open");
+    modal?.remove();
+  });
+}
+
 function initBookingCalendar() {
   const root = document.getElementById("bookingCalendar");
   const input = document.getElementById("bookingDate");
@@ -621,12 +712,16 @@ function initBookingCalendar() {
   today.setHours(0, 0, 0, 0);
   let viewDate = new Date(today.getFullYear(), today.getMonth(), 1);
   let selected = input.value ? new Date(`${input.value}T00:00:00`) : null;
-  const months = ["tháng 1", "tháng 2", "tháng 3", "tháng 4", "tháng 5", "tháng 6", "tháng 7", "tháng 8", "tháng 9", "tháng 10", "tháng 11", "tháng 12"];
-  const weekdays = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
   const iso = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
   const sameDay = (a, b) => a && b && iso(a) === iso(b);
 
   function render() {
+    const activeLang = document.documentElement.lang === "en" ? "en" : "vi";
+    const locale = activeLang === "en" ? "en-US" : "vi-VN";
+    const months = activeLang === "en"
+      ? ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+      : ["tháng 1", "tháng 2", "tháng 3", "tháng 4", "tháng 5", "tháng 6", "tháng 7", "tháng 8", "tháng 9", "tháng 10", "tháng 11", "tháng 12"];
+    const weekdays = activeLang === "en" ? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] : ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
     const year = viewDate.getFullYear();
     const month = viewDate.getMonth();
     const firstDay = new Date(year, month, 1);
@@ -638,10 +733,12 @@ function initBookingCalendar() {
       const date = new Date(year, month, dayNumber);
       const outside = date.getMonth() !== month;
       const disabled = date < today;
-      cells.push(`<button type="button" class="calendar-day${outside ? " is-outside" : ""}${sameDay(date, today) ? " is-today" : ""}${sameDay(date, selected) ? " is-selected" : ""}" data-date="${iso(date)}" aria-label="${date.toLocaleDateString("vi-VN", { dateStyle: "full" })}"${disabled ? " disabled" : ""}>${date.getDate()}</button>`);
+      cells.push(`<button type="button" class="calendar-day${outside ? " is-outside" : ""}${sameDay(date, today) ? " is-today" : ""}${sameDay(date, selected) ? " is-selected" : ""}" data-date="${iso(date)}" aria-label="${date.toLocaleDateString(locale, { dateStyle: "full" })}"${disabled ? " disabled" : ""}>${date.getDate()}</button>`);
     }
-    trigger.textContent = selected ? `Ngày đã chọn: ${selected.toLocaleDateString("vi-VN", { dateStyle: "full" })}` : "Chọn ngày đến";
-    root.innerHTML = `<div class="calendar-header"><strong class="calendar-month">${months[month]} ${year}</strong><div class="calendar-nav"><button type="button" data-calendar-prev aria-label="Tháng trước">‹</button><button type="button" data-calendar-next aria-label="Tháng sau">›</button></div></div><div class="calendar-weekdays">${weekdays.map(day => `<span>${day}</span>`).join("")}</div><div class="calendar-grid">${cells.join("")}</div><p class="calendar-hint">${selected ? `Đã chọn: ${selected.toLocaleDateString("vi-VN", { dateStyle: "full" })}` : "Chọn ngày bạn muốn đến Nhíp Bạc"}</p>`;
+    trigger.textContent = selected
+      ? (activeLang === "en" ? `Selected: ${selected.toLocaleDateString(locale, { dateStyle: "full" })}` : `Ngày đã chọn: ${selected.toLocaleDateString(locale, { dateStyle: "full" })}`)
+      : (activeLang === "en" ? "Select a date" : "Chọn ngày đến");
+    root.innerHTML = `<div class="calendar-header"><strong class="calendar-month">${months[month]} ${year}</strong><div class="calendar-nav"><button type="button" data-calendar-prev aria-label="${activeLang === "en" ? "Previous month" : "Tháng trước"}">‹</button><button type="button" data-calendar-next aria-label="${activeLang === "en" ? "Next month" : "Tháng sau"}">›</button></div></div><div class="calendar-weekdays">${weekdays.map(day => `<span>${day}</span>`).join("")}</div><div class="calendar-grid">${cells.join("")}</div><p class="calendar-hint">${selected ? (activeLang === "en" ? `Selected: ${selected.toLocaleDateString(locale, { dateStyle: "full" })}` : `Đã chọn: ${selected.toLocaleDateString(locale, { dateStyle: "full" })}`) : (activeLang === "en" ? "Choose the day you would like to visit Nhip Bac" : "Chọn ngày bạn muốn đến Nhíp Bạc")}</p>`;
     root.querySelector("[data-calendar-prev]").addEventListener("click", () => { viewDate = new Date(year, month - 1, 1); render(); });
     root.querySelector("[data-calendar-next]").addEventListener("click", () => { viewDate = new Date(year, month + 1, 1); render(); });
     root.querySelectorAll("[data-date]:not(:disabled)").forEach(button => button.addEventListener("click", () => { selected = new Date(`${button.dataset.date}T00:00:00`); input.value = button.dataset.date; input.dispatchEvent(new Event("change", { bubbles: true })); root.classList.remove("is-open"); trigger.setAttribute("aria-expanded", "false"); render(); }));
@@ -654,6 +751,9 @@ function initBookingCalendar() {
     trigger.setAttribute("aria-expanded", "false");
     setTimeout(render, 0);
   });
+  const onLanguageChanged = () => render();
+  window.addEventListener("nhipbac:language-changed", onLanguageChanged);
+  registerPageCleanup(() => window.removeEventListener("nhipbac:language-changed", onLanguageChanged));
   render();
 }
 
@@ -751,12 +851,17 @@ function initPublicData() {
     registerPageCleanup(() => window.removeEventListener("nhipbac:language-changed", onLanguageChanged));
   }
   const form=document.getElementById("bookingForm");
-  if(form) form.addEventListener("submit", async e=>{e.preventDefault();if(form.dataset.submitting==="true")return;const f=new FormData(form), name=String(f.get("name")||"").trim(),phone=String(f.get("phone")||"").trim(),sid=String(f.get("service")||""),service=services.find(s=>s.id===sid),message=document.getElementById("bookingMessage");if(!name||!phone){message.textContent="Vui lòng nhập họ tên và số điện thoại.";message.style.color="#b94a43";return}form.dataset.submitting="true";setBookingLoading(form,true);const record={customerName:name,phone,serviceId:sid,serviceNameSnapshot:service?.nameVi||"Dịch vụ không xác định",preferredDate:f.get("date")||"",preferredTime:f.get("time")||"",message:f.get("note")||""};const result=await saveBooking(record);message.textContent=result.ok?"Đã ghi nhận yêu cầu. Nhíp Bạc sẽ liên hệ để xác nhận lịch.":result.error;message.style.color=result.ok?"#287344":"#b94a43";if(result.ok){form.reset();showBookingSuccess({...record,id:result.data?.booking?.id||NhipBacStore.id("booking"),bookingCode:result.data?.booking?.bookingCode});}setBookingLoading(form,false);setTimeout(()=>form.dataset.submitting="false",700)});
+  if(form) {
+    const onSubmit = async e=>{e.preventDefault();if(form.dataset.submitting==="true")return;const f=new FormData(form), name=String(f.get("name")||"").trim(),phone=String(f.get("phone")||"").trim(),sid=String(f.get("service")||""),service=services.find(s=>s.id===sid),message=form.querySelector("#bookingMessage");if(!name||!phone){message.textContent="Vui lòng nhập họ tên và số điện thoại.";message.style.color="#b94a43";return}form.dataset.submitting="true";setBookingLoading(form,true);const record={customerName:name,phone,serviceId:sid,serviceNameSnapshot:service?.nameVi||"Dịch vụ không xác định",preferredDate:f.get("date")||"",preferredTime:f.get("time")||"",message:f.get("note")||""};const result=await saveBooking(record);message.textContent=result.ok?"Đã ghi nhận yêu cầu. Nhíp Bạc sẽ liên hệ để xác nhận lịch.":result.error;message.style.color=result.ok?"#287344":"#b94a43";if(result.ok){form.reset();showBookingSuccess({...record,id:result.data?.booking?.id||NhipBacStore.id("booking"),bookingCode:result.data?.booking?.bookingCode});}setBookingLoading(form,false);setTimeout(()=>form.dataset.submitting="false",700)};
+    form.addEventListener("submit", onSubmit);
+    registerPageCleanup(() => form.removeEventListener("submit", onSubmit));
+  }
 }
 
 function initPublicPage() {
   cleanupPublicPage();
   initLanguage();
+  initBookingComponent();
   initActiveNav();
   initContactPhone();
   initNavigation();
