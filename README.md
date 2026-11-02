@@ -4,7 +4,7 @@
 
 Đây là website tĩnh, có thể mở bằng máy chủ tĩnh bất kỳ trong thư mục dự án, ví dụ `python -m http.server 8000`, sau đó mở `http://localhost:8000/index.html`. Trang quản trị ở [`admin.html`](admin.html).
 
-Tài khoản demo: `admin` / `ChangeMe123!`. Đây chỉ là lớp kiểm soát giao diện phía trình duyệt, không phải cơ chế xác thực production. Có thể đổi username hoặc `passwordHash` trong `assets/js/admin.js` (hash SHA-256 của mật khẩu mới).
+
 
 ## Đã triển khai
 
