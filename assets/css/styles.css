@@ -1779,6 +1779,14 @@ a.footer-credit-name:focus-visible {
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
   }
+
+  .reveal,
+  .reveal.is-visible,
+  .tilt-card:hover,
+  .tilt-card:focus-within {
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }
 
 /* Soft page navigation used by the mobile swipe router. */

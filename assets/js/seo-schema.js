@@ -14,7 +14,7 @@
       "@type": "PostalAddress",
       streetAddress: "12 Hưng Gia 4",
       addressLocality: "Phường Tân Hưng, Quận 7",
-      addressRegion: "TP. Hồ Chí Minh",
+      addressRegion: "TP.HCM",
       addressCountry: "VN",
     },
     geo: { "@type": "GeoCoordinates", latitude: 10.7324795, longitude: 106.7080122 },
@@ -24,7 +24,7 @@
       opens: "10:00",
       closes: "18:00",
     },
-    areaServed: ["Phú Mỹ Hưng", "Quận 7", "TP. Hồ Chí Minh"],
+    areaServed: ["Phú Mỹ Hưng", "Quận 7", "TP.HCM"],
   };
   const script = document.createElement("script");
   script.type = "application/ld+json";
