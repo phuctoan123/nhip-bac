@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const { supabaseRequest } = require("../_lib/supabase");
 const { verifyToken } = require("../_lib/auth");
 
@@ -7,6 +8,10 @@ const text = (value, max) => String(value ?? "").trim().slice(0, max);
 const idPattern = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
 const statuses = new Set(["draft", "pending", "published", "hidden"]);
 const languages = new Set(["vi", "en"]);
+
+function createReviewId() {
+  return `review-${Date.now().toString(36)}-${crypto.randomBytes(4).toString("hex")}`;
+}
 
 function parseBody(req) {
   if (typeof req.body !== "string") return req.body || {};
@@ -70,6 +75,7 @@ module.exports = async function handler(req, res) {
     const body = parseBody(req);
     if (body === null) return json(res, 400, { error: "JSON không hợp lệ." });
     if (req.method === "POST") {
+      if (!body.id) body.id = createReviewId();
       const parsed = validateReview(body);
       if (parsed.error) return json(res, 400, parsed);
       const result = await supabaseRequest("reviews", {
